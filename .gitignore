@@ -1,0 +1,13 @@
+.gradle/
+build/
+.idea/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+/out/
+/bin/
+*.log
+.claude/settings.local.json
+compile_commands.json
+.kotlin/
