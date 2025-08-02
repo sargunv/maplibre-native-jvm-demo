@@ -81,6 +81,10 @@ void* EGLRendererBackend::getNativeWindowHandleMacOS(JNIEnv* env, jobject canvas
             layer.anchorPoint = CGPointMake(0, 0);
             layer.position = CGPointMake(0, 0);
             
+            // Disable automatic clearing and ensure the layer preserves its contents
+            layer.drawsAsynchronously = NO;
+            layer.needsDisplayOnBoundsChange = NO;
+            
             // Set the layer on the surface
             surfaceLayers.layer = layer;
             

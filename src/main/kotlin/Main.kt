@@ -89,9 +89,7 @@ fun main() {
                         
                         override fun onDidFinishRenderingFrame(status: MapObserver.RenderFrameStatus) {
                             // println("Did finish rendering frame: $status")
-                            if (status.needsRepaint) {
-                                canvas.repaint()
-                            }
+                            // Don't call canvas.repaint() - it causes flickering
                         }
                         
                         override fun onWillStartRenderingMap() {
@@ -104,7 +102,7 @@ fun main() {
                         
                         override fun onDidFinishLoadingStyle() {
                             println("Map style loaded")
-                            canvas.repaint()
+                            // Don't call canvas.repaint() - it causes flickering
                         }
                     }
                     
@@ -137,8 +135,17 @@ fun main() {
                     map?.activateFileSources()
                     
                     // Load a style
-                    val styleUrl = "https://demotiles.maplibre.org/style.json"
+                    val styleUrl = "https://tiles.openfreemap.org/styles/bright"
                     map?.loadStyleURL(styleUrl)
+                    
+                    // Set camera to show San Francisco
+                    val sfCenter = LatLng(37.7749, -122.4194) // San Francisco coordinates
+                    val cameraOptions = CameraOptions()
+                        .withCenter(sfCenter)
+                        .withZoom(11.0) // City-level zoom
+                        .withBearing(0.0)
+                        .withPitch(0.0)
+                    map?.jumpTo(cameraOptions)
                     
                     println("✅ MapLibre initialized with EGL backend")
                     
@@ -152,12 +159,9 @@ fun main() {
         // Create render timer
         val renderTimer = Timer(16) { // ~60 FPS
             runLoop?.runOnce()
-            
-            // Trigger map rendering
-            map?.triggerRepaint()
             frontend?.render()
             // Don't call swap() - it's handled internally by the renderer
-            canvas.repaint()
+            // Don't call canvas.repaint() - it might cause AWT to clear the buffer
         }
         
         // Create window

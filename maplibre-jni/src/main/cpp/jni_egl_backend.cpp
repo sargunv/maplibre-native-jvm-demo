@@ -273,6 +273,7 @@ void EGLRendererBackend::initializeEGL() {
         EGL_ALPHA_SIZE, 8,
         EGL_DEPTH_SIZE, 16,
         EGL_STENCIL_SIZE, 8,
+        EGL_BUFFER_SIZE, 32,
         EGL_NONE
     };
     
