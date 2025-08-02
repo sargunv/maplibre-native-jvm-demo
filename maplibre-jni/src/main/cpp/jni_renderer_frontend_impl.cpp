@@ -1,4 +1,4 @@
-#include "jni_jogl_renderer_frontend.hpp"
+#include "jni_renderer_frontend.hpp"
 #include <mbgl/actor/scheduler.hpp>
 #include <mbgl/util/util.hpp>
 #include <mbgl/renderer/renderer.hpp>
@@ -7,7 +7,7 @@
 
 namespace maplibre_jni {
 
-class JOGLRendererFrontend::Impl {
+class RendererFrontend::Impl {
 public:
     Impl(mbgl::gfx::RendererBackend& backend, float pixelRatio, const std::optional<std::string>& localFontFamily)
         : backend(backend),
@@ -69,49 +69,49 @@ private:
     mbgl::TaggedScheduler threadPool;
 };
 
-std::unique_ptr<JOGLRendererFrontend> JOGLRendererFrontend::create(
+std::unique_ptr<RendererFrontend> RendererFrontend::create(
     mbgl::gfx::RendererBackend& backend,
     float pixelRatio,
     const std::optional<std::string>& localFontFamily) {
     
-    auto frontend = std::unique_ptr<JOGLRendererFrontend>(new JOGLRendererFrontend());
+    auto frontend = std::unique_ptr<RendererFrontend>(new RendererFrontend());
     frontend->impl = std::make_unique<Impl>(backend, pixelRatio, localFontFamily);
     return frontend;
 }
 
-JOGLRendererFrontend::JOGLRendererFrontend() = default;
-JOGLRendererFrontend::~JOGLRendererFrontend() {
+RendererFrontend::RendererFrontend() = default;
+RendererFrontend::~RendererFrontend() {
     if (impl) {
         impl.reset();
     }
 }
 
-void JOGLRendererFrontend::reset() {
+void RendererFrontend::reset() {
     if (impl) {
         impl->reset();
     }
 }
 
-void JOGLRendererFrontend::setObserver(mbgl::RendererObserver& observer) {
+void RendererFrontend::setObserver(mbgl::RendererObserver& observer) {
     if (impl) {
         impl->setObserver(observer);
     }
 }
 
-void JOGLRendererFrontend::update(std::shared_ptr<mbgl::UpdateParameters> parameters) {
+void RendererFrontend::update(std::shared_ptr<mbgl::UpdateParameters> parameters) {
     if (impl) {
         impl->update(parameters);
     }
 }
 
-const mbgl::TaggedScheduler& JOGLRendererFrontend::getThreadPool() const {
+const mbgl::TaggedScheduler& RendererFrontend::getThreadPool() const {
     if (impl) {
         return impl->getThreadPool();
     }
-    throw std::runtime_error("JOGLRendererFrontend not initialized");
+    throw std::runtime_error("RendererFrontend not initialized");
 }
 
-void JOGLRendererFrontend::render() {
+void RendererFrontend::render() {
     if (impl) {
         impl->render();
     }

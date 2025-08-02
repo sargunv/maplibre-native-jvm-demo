@@ -16,18 +16,18 @@ class RendererBackend;
 
 namespace maplibre_jni {
 
-// JOGL-specific renderer frontend that encapsulates the complexity of MapLibre rendering
+// Platform-agnostic renderer frontend that encapsulates the complexity of MapLibre rendering
 // This follows the pattern from maplibre-native-rs to avoid missing header dependencies
-class JOGLRendererFrontend : public mbgl::RendererFrontend {
+class RendererFrontend : public mbgl::RendererFrontend {
 public:
     // Create a frontend with the given backend and pixel ratio
-    static std::unique_ptr<JOGLRendererFrontend> create(
+    static std::unique_ptr<RendererFrontend> create(
         mbgl::gfx::RendererBackend& backend,
         float pixelRatio,
         const std::optional<std::string>& localFontFamily = std::nullopt
     );
     
-    ~JOGLRendererFrontend() override;
+    ~RendererFrontend() override;
     
     // RendererFrontend implementation
     void reset() override;
@@ -35,12 +35,12 @@ public:
     void update(std::shared_ptr<mbgl::UpdateParameters> parameters) override;
     const mbgl::TaggedScheduler& getThreadPool() const override;
     
-    // Additional methods for JOGL integration
+    // Additional methods for rendering
     void render();
     
 protected:
     // Hide constructor to force use of factory method
-    JOGLRendererFrontend();
+    RendererFrontend();
     
 private:
     class Impl;

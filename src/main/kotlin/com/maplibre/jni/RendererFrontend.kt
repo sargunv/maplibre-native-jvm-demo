@@ -1,19 +1,19 @@
 package com.maplibre.jni
 
 /**
- * JOGL-based renderer frontend for MapLibre Native.
- * This implementation integrates MapLibre's rendering with JOGL's OpenGL context.
+ * Renderer frontend for MapLibre Native.
+ * This implementation works with any renderer backend (EGL, JOGL, etc.)
  */
-class JOGLRendererFrontend(
-    backend: JOGLRendererBackend,
+class RendererFrontend(
+    backendPtr: Long,  // Accept raw pointer to any backend
     pixelRatio: Float
 ) : NativeObject(
-    new = { nativeNew(backend.nativePtr, pixelRatio) },
+    new = { nativeNew(backendPtr, pixelRatio) },
     destroy = ::nativeDestroy
 ) {
     /**
      * Render the current frame.
-     * This should be called from JOGL's display callback.
+     * This should be called from the render loop.
      */
     fun render() {
         nativeRender(nativePtr)

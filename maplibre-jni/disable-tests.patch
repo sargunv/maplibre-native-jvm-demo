@@ -1,0 +1,16 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1591,9 +1591,11 @@
+     message(FATAL_ERROR "Unsupported target platform: " ${CMAKE_SYSTEM_NAME})
+ endif()
+ 
+-add_subdirectory(${PROJECT_SOURCE_DIR}/test)
+-add_subdirectory(${PROJECT_SOURCE_DIR}/benchmark)
+-add_subdirectory(${PROJECT_SOURCE_DIR}/render-test)
++if(BUILD_TESTING)
++    add_subdirectory(${PROJECT_SOURCE_DIR}/test)
++    add_subdirectory(${PROJECT_SOURCE_DIR}/benchmark)
++    add_subdirectory(${PROJECT_SOURCE_DIR}/render-test)
++endif()
+ 
+ include(cmake/mbgl-core-deps.cmake)

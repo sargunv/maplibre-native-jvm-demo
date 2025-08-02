@@ -1,7 +1,8 @@
-import com.jogamp.opengl.*
-import com.jogamp.opengl.awt.GLJPanel
 import com.maplibre.jni.*
 import java.awt.BorderLayout
+import java.awt.Canvas
+import java.awt.event.ComponentAdapter
+import java.awt.event.ComponentEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.JFrame
@@ -11,38 +12,38 @@ import kotlin.system.exitProcess
 
 fun main() {
     SwingUtilities.invokeLater {
-        // Use OpenGL ES profile for MapLibre compatibility
-        val glProfile = GLProfile.get(GLProfile.GLES3)
-        val glCapabilities = GLCapabilities(glProfile)
-        
-        // Configure framebuffer format
-        glCapabilities.setRedBits(8)
-        glCapabilities.setGreenBits(8)
-        glCapabilities.setBlueBits(8)
-        glCapabilities.setAlphaBits(8)
-        glCapabilities.setStencilBits(8)
-        glCapabilities.setDepthBits(16)
-        
-        val glPanel = GLJPanel(glCapabilities)
+        // Create a simple Canvas (no OpenGL initialization needed!)
+        val canvas = Canvas()
         
         // MapLibre components
         var runLoop: RunLoop? = null
         var map: MaplibreMap? = null
-        var backend: JOGLRendererBackend? = null
-        var frontend: JOGLRendererFrontend? = null
-        var glContext: JOGLContext? = null
+        var backend: EGLRendererBackend? = null
+        var frontend: RendererFrontend? = null
         
-        glPanel.addGLEventListener(object : GLEventListener {
-            override fun init(drawable: GLAutoDrawable) {
-                val gl = drawable.gl
-                println("OpenGL: ${gl.glGetString(GL.GL_VERSION)} (${gl.glGetString(GL.GL_RENDERER)})")
-                
+        // Initialize when canvas is ready
+        canvas.addComponentListener(object : ComponentAdapter() {
+            var initialized = false
+            
+            override fun componentResized(e: ComponentEvent) {
+                if (!initialized && canvas.width > 0 && canvas.height > 0) {
+                    initialized = true
+                    initializeMapLibre()
+                } else if (initialized) {
+                    // Update size
+                    backend?.updateSize(canvas.width, canvas.height)
+                    map?.setSize(Size(canvas.width, canvas.height))
+                }
+            }
+            
+            fun initializeMapLibre() {
                 try {
                     runLoop = RunLoop()
                     
-                    glContext = JOGLContext(drawable.context, drawable)
-                    backend = JOGLRendererBackend(glContext, drawable.surfaceWidth, drawable.surfaceHeight)
-                    frontend = JOGLRendererFrontend(backend, 1.0f)
+                    // Create EGL backend (handles all platform-specific setup internally)
+                    backend = EGLRendererBackend(canvas, canvas.width, canvas.height)
+                    frontend = RendererFrontend(backend.nativePtr, 1.0f)
+                    
                     val observer = object : MapObserver {
                         override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
                             println("Camera will change: $mode")
@@ -79,7 +80,7 @@ fun main() {
                         override fun onDidFinishRenderingFrame(status: MapObserver.RenderFrameStatus) {
                             // println("Did finish rendering frame: $status")
                             if (status.needsRepaint) {
-                                glPanel.repaint()
+                                canvas.repaint()
                             }
                         }
                         
@@ -93,96 +94,85 @@ fun main() {
                         
                         override fun onDidFinishLoadingStyle() {
                             println("Map style loaded")
-                            glPanel.repaint()
+                            canvas.repaint()
                         }
-                        
                     }
-                    
-                    val mapOptions = MapOptions()
-                        .withSize(Size(drawable.surfaceWidth, drawable.surfaceHeight))
-                        .withPixelRatio(1.0f)
                     
                     val resourceOptions = ResourceOptions()
-                        .withCachePath("/tmp/maplibre-cache.db")
+                        .withApiKey("")
+                        .withAssetPath(".")
+                        .withCachePath("maplibre-cache")
                     
                     val clientOptions = ClientOptions()
-                        .withName("MapLibre JVM Demo")
+                        .withName("MapLibreJNIDemo")
                         .withVersion("1.0.0")
                     
-                    map = MaplibreMap(frontend, observer, mapOptions, resourceOptions, clientOptions)
+                    val mapOptions = MapOptions()
+                        .withMapMode(MapMode.CONTINUOUS)
+                        .withViewportMode(ViewportMode.DEFAULT)
+                        .withConstrainMode(ConstrainMode.HEIGHT_ONLY)
+                        .withCrossSourceCollisions(true)
+                        .withPixelRatio(1.0f)
+                        .withSize(Size(canvas.width, canvas.height))
                     
-                    map.activateFileSources()
+                    map = MaplibreMap(
+                        rendererFrontend = frontend,
+                        mapObserver = observer,
+                        mapOptions = mapOptions,
+                        resourceOptions = resourceOptions,
+                        clientOptions = clientOptions
+                    )
                     
-                    val styleUrl = "https://tiles.openfreemap.org/styles/bright"
-                    map.loadStyleURL(styleUrl)
+                    // Activate file sources for network loading
+                    map?.activateFileSources()
                     
-                    map.jumpTo(CameraOptions()
-                        .withCenter(LatLng(37.7749, -122.4194))  // San Francisco
-                        .withZoom(12.0))
+                    // Load a style
+                    val styleUrl = "https://demotiles.maplibre.org/style.json"
+                    map?.loadStyleURL(styleUrl)
                     
-                    map.triggerRepaint()
+                    println("✅ MapLibre initialized with EGL backend")
+                    
                 } catch (e: Exception) {
+                    println("❌ Failed to initialize MapLibre: ${e.message}")
                     e.printStackTrace()
-                    println("Failed to initialize map: ${e.message}")
                 }
-            }
-            
-            override fun display(drawable: GLAutoDrawable) {
-                val gl = drawable.gl
-                
-                // Process async events
-                if (runLoop != null) {
-                    runLoop.runOnce()
-                }
-                
-                gl.glViewport(0, 0, drawable.surfaceWidth, drawable.surfaceHeight)
-                if (frontend != null && map != null) {
-                    try {
-                        frontend.render()
-                    } catch (e: Exception) {
-                        println("Render error: ${e.message}")
-                        e.printStackTrace()
-                    }
-                }
-            }
-            
-            override fun reshape(drawable: GLAutoDrawable, x: Int, y: Int, width: Int, height: Int) {
-                backend?.updateSize(width, height)
-                map?.setSize(Size(width, height))
-            }
-            
-            override fun dispose(drawable: GLAutoDrawable) {
-                // TODO: Explicitly clean up memory (handled by Cleaner right now)
             }
         })
         
-        val frame = JFrame("MapLibre JVM Demo")
+        // Create render timer
+        val renderTimer = Timer(16) { // ~60 FPS
+            runLoop?.runOnce()
+            
+            // Trigger map rendering
+            map?.triggerRepaint()
+            frontend?.render()
+            backend?.swap()
+            canvas.repaint()
+        }
+        
+        // Create window
+        val frame = JFrame("MapLibre Native JVM Demo - EGL Backend")
+        frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+        frame.layout = BorderLayout()
+        frame.add(canvas, BorderLayout.CENTER)
+        frame.setSize(800, 600)
+        frame.setLocationRelativeTo(null)
+        
         frame.addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
-                frame.dispose()
+                renderTimer.stop()
+                
+                // Cleanup
+                map?.close()
+                frontend?.close()
+                backend?.close()
+                runLoop?.close()
+                
                 exitProcess(0)
             }
         })
         
-        frame.contentPane.add(glPanel, BorderLayout.CENTER)
-        frame.setSize(800, 600)
-        frame.setLocationRelativeTo(null)
         frame.isVisible = true
-        
-        Timer(100) {
-            glPanel.repaint()
-        }.apply {
-            isRepeats = true
-            start()
-        }
-        
-        // Auto-close after 10 seconds (demo)
-        Timer(10000) {
-            frame.dispose()
-            exitProcess(0)
-        }.apply {
-            isRepeats = false
-            start()
-        }
+        renderTimer.start()
     }
 }

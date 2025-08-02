@@ -31,12 +31,38 @@ internal object MapLibreNativeLoader {
             else -> throw UnsupportedOperationException("Unsupported OS: $osName")
         }
         
-        // Load from resources
+        // Create a temp directory for all libraries
+        val tempDir = Files.createTempDirectory("maplibre-native")
+        
+        // On macOS/Windows, we need to extract ANGLE libraries first
+        if (osName.contains("mac") || osName.contains("win")) {
+            val angleLibs = if (osName.contains("mac")) {
+                listOf("libEGL.dylib", "libGLESv2.dylib")
+            } else {
+                listOf("libEGL.dll", "libGLESv2.dll")
+            }
+            
+            // Extract ANGLE libraries with their proper names
+            for (angleLib in angleLibs) {
+                val angleResourcePath = "/native/$osDir/$angleLib"
+                val angleInputStream = MapLibreNativeLoader::class.java.getResourceAsStream(angleResourcePath)
+                if (angleInputStream != null) {
+                    val angleTempFile = tempDir.resolve(angleLib)
+                    angleInputStream.use { input ->
+                        Files.copy(input, angleTempFile, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    // Load the libraries
+                    System.load(angleTempFile.toAbsolutePath().toString())
+                }
+            }
+        }
+        
+        // Extract and load the main library
         val resourcePath = "/native/$osDir/$libName"
         val inputStream = MapLibreNativeLoader::class.java.getResourceAsStream(resourcePath)
             ?: throw RuntimeException("Native library not found: $resourcePath")
             
-        val tempFile = Files.createTempFile("maplibre-jni", libName.substringAfter("."))
+        val tempFile = tempDir.resolve(libName)
         inputStream.use { input ->
             Files.copy(input, tempFile, StandardCopyOption.REPLACE_EXISTING)
         }

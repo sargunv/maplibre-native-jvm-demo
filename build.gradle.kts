@@ -8,17 +8,10 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven {
-        url = uri("https://jogamp.org/deployment/maven/")
-    }
 }
 
 dependencies {
     kotlin("stdlib")
-    implementation("org.jogamp.gluegen:gluegen-rt:2.5.0")
-    implementation("org.jogamp.jogl:jogl-all:2.5.0")
-    implementation("org.jogamp.gluegen:gluegen-rt:2.5.0:natives-linux-amd64")
-    implementation("org.jogamp.jogl:jogl-all:2.5.0:natives-linux-amd64")
     
     testImplementation(kotlin("test"))
 }
@@ -48,8 +41,34 @@ tasks.register<Copy>("copyNativeLibrary") {
         else -> throw GradleException("Unsupported OS")
     }
     
+    val osFolder = when {
+        os.isLinux -> "linux"
+        os.isMacOsX -> "macos"
+        os.isWindows -> "windows"
+        else -> throw GradleException("Unsupported OS")
+    }
+    
     from("maplibre-jni/build/lib/main/shared/$libName")
-    into("$buildDir/generated/resources/main/native/${os.familyName}")
+    into("$buildDir/generated/resources/main/native/$osFolder")
+}
+
+// Copy ANGLE libraries for macOS (now copied by CMake)
+tasks.register<Copy>("copyAngleLibraries") {
+    dependsOn(":maplibre-jni:buildNative")
+    val os = OperatingSystem.current()
+    
+    if (os.isMacOsX) {
+        // ANGLE libraries are now downloaded and copied by CMake
+        from("maplibre-jni/build/lib/main/shared/libEGL.dylib")
+        from("maplibre-jni/build/lib/main/shared/libGLESv2.dylib")
+        into("$buildDir/generated/resources/main/native/macos")
+    } else if (os.isWindows) {
+        // TODO: Add Windows ANGLE libraries when available
+        from("libs/windows/libEGL.dll")
+        from("libs/windows/libGLESv2.dll")
+        into("$buildDir/generated/resources/main/native/windows")
+    }
+    // Linux can use system EGL or bundled ANGLE
 }
 
 // Add the generated resources to the source set
@@ -67,9 +86,9 @@ sourceSets {
 }
 
 tasks.named("processResources") {
-    dependsOn("copyNativeLibrary")
+    dependsOn("copyNativeLibrary", "copyAngleLibraries")
 }
 
 tasks.named("processTestResources") {
-    dependsOn("copyNativeLibrary")
+    dependsOn("copyNativeLibrary", "copyAngleLibraries")
 }

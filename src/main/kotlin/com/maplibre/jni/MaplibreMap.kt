@@ -8,7 +8,7 @@ import java.lang.ref.Cleaner
  * for interacting with the map.
  */
 class MaplibreMap(
-    rendererFrontend: JOGLRendererFrontend,
+    rendererFrontend: RendererFrontend,
     mapObserver: MapObserver,
     mapOptions: MapOptions,
     resourceOptions: ResourceOptions,
