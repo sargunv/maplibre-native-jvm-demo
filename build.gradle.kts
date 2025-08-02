@@ -17,8 +17,16 @@ dependencies {
     kotlin("stdlib")
     implementation("org.jogamp.gluegen:gluegen-rt:2.5.0")
     implementation("org.jogamp.jogl:jogl-all:2.5.0")
+    
+    // Include natives for all platforms
     implementation("org.jogamp.gluegen:gluegen-rt:2.5.0:natives-linux-amd64")
     implementation("org.jogamp.jogl:jogl-all:2.5.0:natives-linux-amd64")
+    implementation("org.jogamp.gluegen:gluegen-rt:2.5.0:natives-linux-aarch64")
+    implementation("org.jogamp.jogl:jogl-all:2.5.0:natives-linux-aarch64")
+    implementation("org.jogamp.gluegen:gluegen-rt:2.5.0:natives-macosx-universal")
+    implementation("org.jogamp.jogl:jogl-all:2.5.0:natives-macosx-universal")
+    implementation("org.jogamp.gluegen:gluegen-rt:2.5.0:natives-windows-amd64")
+    implementation("org.jogamp.jogl:jogl-all:2.5.0:natives-windows-amd64")
     
     testImplementation(kotlin("test"))
 }
