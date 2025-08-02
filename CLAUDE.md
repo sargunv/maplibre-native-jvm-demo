@@ -7,22 +7,25 @@ This project creates JVM bindings for MapLibre Native using direct C++ JNI, enab
 - **MapLibre Native**: C++ map rendering engine
 - **C++ JNI Layer**: Direct JNI bindings to MapLibre types
 - **Kotlin API**: High-level API for Java/Kotlin developers with automatic memory management
-- **JOGL Integration**: OpenGL ES context management for rendering
+- **EGL Backend**: Cross-platform OpenGL ES context management (ANGLE on macOS/Windows, Mesa on Linux)
 
 ## Build System
 Uses CMake to build MapLibre from source with custom JNI code:
 - **MapLibre Native as Git Submodule**: At `vendor/maplibre-native`
 - **CMake Integration**: Single CMakeLists.txt builds both MapLibre and JNI code
 
-## Current Status (2025-08-01)
+## Current Status (2025-08-02)
 
 ### What Works Now
-- ✅ **Complete rendering pipeline**: Map → Frontend → Backend → JOGL → Display
+- ✅ **Complete rendering pipeline**: Map → Frontend → Backend → EGL → Display
+- ✅ **Cross-platform EGL backend**: Unified rendering backend using EGL on all platforms
+- ✅ **ANGLE integration on macOS**: OpenGL ES via Metal using ANGLE libraries
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
-- ✅ **OpenGL ES compatibility**: Proper OpenGL ES 3.2 context with framebuffer config
 - ✅ **Map observer callbacks**: All events fire correctly (style loaded, map loaded, etc.)
+- ✅ **Retina display support**: Proper scaling for high-DPI displays on macOS
+- ✅ **Static rendering without flickering**: Fixed double-buffering issues
 
 ### What Isn't Yet Implemented
 - ❌ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
@@ -30,16 +33,21 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
+- ⚠️ **Resize flickering**: Window resize events still cause flickering
 
 ### Architecture Status
 ```
-✅ JOGL GLJPanel (OpenGL ES 3.2)
+✅ Java AWT Canvas
+    ↓
+✅ JAWT (Native window handle extraction)
+    ↓
+✅ EGL Context (ANGLE on macOS/Windows, Mesa on Linux)
     ↓
 ✅ RunLoop (processes async events)
     ↓
-✅ JOGLRendererBackend (C++, ContextMode::Unique)
+✅ EGLRendererBackend (C++, ContextMode::Unique)
     ↓
-✅ JOGLRendererFrontend (C++)
+✅ RendererFrontend (C++)
     ↓
 ✅ Map (C++) ← MapObserver (C++→JNI→Kotlin)
     ↓
@@ -62,15 +70,30 @@ Uses CMake to build MapLibre from source with custom JNI code:
 ### Known Issues
 - Memory cleanup disabled to avoid crashes (needs investigation)
 - No user interaction implemented yet
+- Flickering occurs during window resize (surface updates not synchronized with render loop)
 
 ## Technical Implementation Details
 
-### OpenGL ES Compatibility Fixes
-**Critical discoveries** from GLFW demo comparison:
+### Critical Implementation Discoveries
+
+#### OpenGL ES Compatibility
 - **Context Type**: MapLibre expects OpenGL ES, not desktop OpenGL
 - **Context Mode**: `ContextMode::Unique` required for proper state management
 - **Framebuffer**: Explicit RGBA8/stencil8/depth16 configuration needed
 - **Render Order**: Let MapLibre handle clearing, don't override with manual clears
+
+#### EGL/ANGLE Integration (2025-08-02)
+- **Unified EGL Backend**: Replaced JOGL with direct EGL for cross-platform consistency
+- **ANGLE on macOS**: Successfully using ANGLE to provide OpenGL ES via Metal backend
+- **JAWT Version 9**: Required for modern Java (version constant: 0x00090000)
+- **CALayer Extraction**: macOS requires Objective-C++ to properly extract CALayer from JAWT
+- **Retina Scaling**: Must account for backing scale factor (2x on Retina displays)
+
+#### Flickering Fixes
+- **Remove canvas.repaint()**: AWT's repaint was causing buffer clearing and flickering
+- **Single render path**: Only render in timer loop, not in observer callbacks
+- **VSync enabled**: `eglSwapInterval(display, 1)` helps prevent tearing
+- **Resize issue remains**: Rapid surface updates during resize still cause flickering
 
 ### JNI Implementation Pattern
 ```cpp
@@ -99,31 +122,35 @@ open class NativeObject internal constructor(
 ```
 
 ## Build Requirements
-- C++ compiler with C++17 support
+- C++ compiler with C++20 support
 - Java Development Kit (JDK 11+)
-- JOGL (Java OpenGL bindings)
-- CMake 3.20+
-- OpenGL ES 3.2 support
+- CMake 3.21+
+- Platform-specific:
+  - **macOS**: ANGLE libraries (auto-downloaded via CMake)
+  - **Linux**: Mesa EGL/OpenGL ES or ANGLE
+  - **Windows**: ANGLE libraries for D3D11 backend
 
 ## Project Structure
 ```
 maplibre-jni/
-├── CMakeLists.txt              # CMake build configuration
+├── CMakeLists.txt              # CMake build configuration with ANGLE integration
 ├── build.gradle.kts            # Gradle with CMake integration
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
     ├── jni_*_types.cpp         # Core type wrappers
-    ├── jni_jogl_backend.cpp    # JOGL OpenGL ES backend
-    ├── jni_jogl_renderer_frontend_impl.cpp  # Renderer frontend
-    └── jni_map_wrapper.cpp     # Map and observer wrappers
+    ├── jni_egl_backend.cpp     # Unified EGL backend
+    ├── jni_egl_backend_macos.mm # macOS-specific CALayer extraction
+    ├── jni_renderer_frontend_impl.cpp  # Renderer frontend
+    └── jni_maplibre_map.cpp    # Map and observer wrappers
 
 src/main/kotlin/
 └── com/maplibre/jni/           # Kotlin API layer
     ├── NativeObject.kt         # Base class with automatic cleanup
     ├── *Types.kt               # MapLibre type wrappers
     ├── MapObserver.kt          # Event callbacks
+    ├── EGLRendererBackend.kt   # EGL backend wrapper
     └── MaplibreMap.kt          # Main map API
-, with a focus on simplicity and ease of use.
+
 src/main/kotlin/Main.kt         # Demo application
 ```
 
@@ -137,7 +164,33 @@ src/main/kotlin/Main.kt         # Demo application
 ### Build and Development Notes
 - Never do a ./gradlew clean. This requires rebuilding maplibre native from scratch, which takes a long time.
 
-## macOS Support Research (2025-08-02)
+## Implementation Decision: Unified EGL Backend (2025-08-02)
+
+### Decision
+Implemented a unified EGL backend across all platforms, dropping the JOGL dependency in favor of direct EGL/ANGLE integration.
+
+### Implementation Details
+- **macOS**: Using ANGLE's Metal backend via EGL
+- **Windows**: Using ANGLE's D3D11 backend via EGL
+- **Linux**: Using system Mesa EGL or ANGLE's OpenGL backend
+- **JAWT Integration**: Direct native window handle extraction for all platforms
+- **ANGLE Libraries**: Downloaded automatically via CMake FetchContent on macOS
+
+### Benefits Achieved
+- Single codebase for all platforms
+- Better control over rendering pipeline
+- Eliminated JOGL dependency and its limitations
+- Direct access to native window handles via JAWT
+- Proper Retina/HiDPI support
+
+### Lessons Learned
+- JAWT version 9 (0x00090000) required for modern Java
+- macOS requires Objective-C++ for proper CALayer extraction
+- ANGLE libraries must be extracted to same directory for proper loading
+- Removing canvas.repaint() calls eliminated flickering
+- Window resize events need special handling to prevent flickering
+
+## Original macOS Support Research (2025-08-02)
 
 ### Problem
 OpenGL ES is not available on macOS, requiring an alternative rendering approach.
