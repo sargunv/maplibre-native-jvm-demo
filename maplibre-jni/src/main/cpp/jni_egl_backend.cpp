@@ -60,6 +60,10 @@ public:
         // Get the current size and set viewport
         auto size = backend.getSize();
         backend.setViewport(0, 0, size);
+        
+        // Debug log
+        mbgl::Log::Debug(mbgl::Event::OpenGL, 
+            "Viewport set to: " + std::to_string(size.width) + "x" + std::to_string(size.height));
     }
 
     void swap() override {
@@ -306,6 +310,9 @@ void EGLRendererBackend::initializeEGL() {
     if (!eglMakeCurrent(display, surface, surface, context)) {
         throw std::runtime_error("Failed to make EGL context current");
     }
+    
+    // Set swap interval to 1 for vsync (prevents tearing and flickering)
+    eglSwapInterval(display, 1);
     
     // Log OpenGL ES info
     const char* version = (const char*)glGetString(GL_VERSION);

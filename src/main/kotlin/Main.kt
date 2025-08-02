@@ -30,9 +30,12 @@ fun main() {
                     initialized = true
                     initializeMapLibre()
                 } else if (initialized) {
-                    // Update size
-                    backend?.updateSize(canvas.width, canvas.height)
-                    map?.setSize(Size(canvas.width, canvas.height))
+                    // Update size with proper scaling for Retina displays
+                    val scale = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
+                    val pixelWidth = (canvas.width * scale).toInt()
+                    val pixelHeight = (canvas.height * scale).toInt()
+                    backend?.updateSize(pixelWidth, pixelHeight)
+                    map?.setSize(Size(pixelWidth, pixelHeight))
                 }
             }
             
@@ -41,8 +44,15 @@ fun main() {
                     runLoop = RunLoop()
                     
                     // Create EGL backend (handles all platform-specific setup internally)
-                    backend = EGLRendererBackend(canvas, canvas.width, canvas.height)
-                    frontend = RendererFrontend(backend.nativePtr, 1.0f)
+                    // On macOS with Retina displays, we need to use the actual pixel dimensions
+                    val scale = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
+                    val pixelWidth = (canvas.width * scale).toInt()
+                    val pixelHeight = (canvas.height * scale).toInt()
+                    
+                    println("Canvas size: ${canvas.width}x${canvas.height}, scale: $scale, pixel size: ${pixelWidth}x${pixelHeight}")
+                    
+                    backend = EGLRendererBackend(canvas, pixelWidth, pixelHeight)
+                    frontend = RendererFrontend(backend.nativePtr, scale)
                     
                     val observer = object : MapObserver {
                         override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
@@ -146,7 +156,7 @@ fun main() {
             // Trigger map rendering
             map?.triggerRepaint()
             frontend?.render()
-            backend?.swap()
+            // Don't call swap() - it's handled internally by the renderer
             canvas.repaint()
         }
         

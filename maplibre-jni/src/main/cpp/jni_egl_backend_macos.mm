@@ -6,6 +6,7 @@
 #import <QuartzCore/CALayer.h>
 #include <jawt.h>
 #include <jawt_md.h>
+#include <sstream>
 
 // Define JAWT_VERSION_9 if not available
 #ifndef JAWT_VERSION_9
@@ -60,6 +61,10 @@ void* EGLRendererBackend::getNativeWindowHandleMacOS(JNIEnv* env, jobject canvas
         return nullptr;
     }
     
+    // Get the bounds from the drawing surface info
+    CGRect bounds = CGRectMake(dsi->bounds.x, dsi->bounds.y, 
+                               dsi->bounds.width, dsi->bounds.height);
+    
     // Get the CALayer
     CALayer* layer = surfaceLayers.layer;
     if (!layer) {
@@ -72,16 +77,27 @@ void* EGLRendererBackend::getNativeWindowHandleMacOS(JNIEnv* env, jobject canvas
             // Configure the layer for OpenGL ES rendering
             layer.opaque = YES;
             layer.contentsScale = [[NSScreen mainScreen] backingScaleFactor];
+            layer.bounds = bounds;
+            layer.anchorPoint = CGPointMake(0, 0);
+            layer.position = CGPointMake(0, 0);
             
             // Set the layer on the surface
             surfaceLayers.layer = layer;
             
-            mbgl::Log::Info(mbgl::Event::OpenGL, "Created new CALayer for rendering");
+            std::stringstream msg;
+            msg << "Created new CALayer for rendering with bounds: " 
+                << bounds.size.width << "x" << bounds.size.height 
+                << ", scale: " << layer.contentsScale;
+            mbgl::Log::Info(mbgl::Event::OpenGL, msg.str());
         } else {
             mbgl::Log::Info(mbgl::Event::OpenGL, "Using window CALayer");
+            // Update the layer bounds to match the canvas
+            layer.bounds = bounds;
         }
     } else {
         mbgl::Log::Info(mbgl::Event::OpenGL, "Using existing CALayer");
+        // Update the layer bounds to match the canvas
+        layer.bounds = bounds;
     }
     
     // Store the JAWT structures for later cleanup
