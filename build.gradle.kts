@@ -52,25 +52,6 @@ tasks.register<Copy>("copyNativeLibrary") {
     into("$buildDir/generated/resources/main/native/$osFolder")
 }
 
-// Copy ANGLE libraries for macOS (now copied by CMake)
-tasks.register<Copy>("copyAngleLibraries") {
-    dependsOn(":maplibre-jni:buildNative")
-    val os = OperatingSystem.current()
-    
-    if (os.isMacOsX) {
-        // ANGLE libraries are now downloaded and copied by CMake
-        from("maplibre-jni/build/lib/main/shared/libEGL.dylib")
-        from("maplibre-jni/build/lib/main/shared/libGLESv2.dylib")
-        into("$buildDir/generated/resources/main/native/macos")
-    } else if (os.isWindows) {
-        // TODO: Add Windows ANGLE libraries when available
-        from("libs/windows/libEGL.dll")
-        from("libs/windows/libGLESv2.dll")
-        into("$buildDir/generated/resources/main/native/windows")
-    }
-    // Linux can use system EGL or bundled ANGLE
-}
-
 // Add the generated resources to the source set
 sourceSets {
     main {
@@ -86,9 +67,9 @@ sourceSets {
 }
 
 tasks.named("processResources") {
-    dependsOn("copyNativeLibrary", "copyAngleLibraries")
+    dependsOn("copyNativeLibrary")
 }
 
 tasks.named("processTestResources") {
-    dependsOn("copyNativeLibrary", "copyAngleLibraries")
+    dependsOn("copyNativeLibrary")
 }

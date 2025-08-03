@@ -2,7 +2,7 @@ package com.maplibre.jni
 
 /**
  * Renderer frontend for MapLibre Native.
- * This implementation works with any renderer backend (EGL, JOGL, etc.)
+ * This implementation works with any renderer backend (Metal, OpenGL ES, etc.)
  */
 class RendererFrontend(
     backendPtr: Long,  // Accept raw pointer to any backend

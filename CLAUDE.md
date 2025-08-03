@@ -7,7 +7,7 @@ This project creates JVM bindings for MapLibre Native using direct C++ JNI, enab
 - **MapLibre Native**: C++ map rendering engine
 - **C++ JNI Layer**: Direct JNI bindings to MapLibre types
 - **Kotlin API**: High-level API for Java/Kotlin developers with automatic memory management
-- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux/Windows
+- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux
 
 ## Build System
 Uses CMake to build MapLibre from source with custom JNI code:
@@ -18,8 +18,8 @@ Uses CMake to build MapLibre from source with custom JNI code:
 
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
-- ✅ **Native Metal backend on macOS**: Direct Metal rendering without ANGLE translation layer
-- ✅ **OpenGL ES backend on Linux/Windows**: Using EGL for context management
+- ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
+- ✅ **OpenGL ES backend on Linux**: Using EGL for context management
 - ✅ **Cross-platform JAWT integration**: Unified JAWTRendererBackend with platform-specific implementations
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
@@ -45,7 +45,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
     ↓
 ✅ JAWT (Native window handle extraction)
     ↓
-✅ Platform Backend (Metal on macOS, EGL/OpenGL ES on Linux/Windows)
+✅ Platform Backend (Metal on macOS, EGL/OpenGL ES on Linux)
     ↓
 ✅ RunLoop (processes async events)
     ↓
@@ -133,8 +133,7 @@ open class NativeObject internal constructor(
 - CMake 3.21+
 - Platform-specific:
   - **macOS**: Metal framework (included with Xcode)
-  - **Linux**: Mesa EGL/OpenGL ES or ANGLE
-  - **Windows**: ANGLE libraries for D3D11 backend
+  - **Linux**: Mesa EGL/OpenGL ES development packages
 
 ## Project Structure
 ```
@@ -146,7 +145,7 @@ maplibre-jni/
     ├── jni_*_types.cpp         # Core type wrappers
     ├── jni_jawt_backend.hpp    # Base JAWT backend interface
     ├── jni_metal_backend.mm    # Metal backend for macOS
-    ├── jni_gl_backend.cpp      # OpenGL ES backend for Linux/Windows
+    ├── jni_gl_backend.cpp      # OpenGL ES backend for Linux
     ├── jni_renderer_frontend_impl.cpp  # Renderer frontend
     └── jni_maplibre_map.cpp    # Map and observer wrappers
 
@@ -171,30 +170,32 @@ src/main/kotlin/Main.kt         # Demo application
 ### Build and Development Notes
 - Never do a ./gradlew clean. This requires rebuilding maplibre native from scratch, which takes a long time.
 
-## Implementation Decision: Native Metal Backend (2025-08-03)
+## Implementation Decision: Native Multiplatform Backends (2025-08-03)
 
 ### Decision
-Dropped ANGLE dependency on macOS in favor of native Metal backend, while keeping OpenGL ES via EGL for Linux/Windows.
+Implemented native graphics backends for each platform without any translation layers:
+- **macOS**: Direct Metal backend
+- **Linux**: Direct OpenGL ES via system EGL
+- **Windows**: Not yet supported (future work)
 
 ### Implementation Details
-- **macOS**: Direct Metal backend mimicking GLFW implementation
-- **Windows**: OpenGL ES via ANGLE's D3D11 backend and EGL
-- **Linux**: System Mesa EGL or ANGLE's OpenGL backend
-- **JAWT Integration**: Platform-specific backend selection at compile time
+- **No ANGLE**: Removed all ANGLE dependencies, using native APIs directly
+- **No JOGL**: Removed JOGL dependency, using JAWT directly for window integration  
+- **Platform-specific backends**: Metal on macOS, OpenGL ES on Linux
+- **JAWT Integration**: Direct native window handle extraction for supported platforms
 - **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
 
 ### Benefits Achieved
-- Native performance on macOS without translation overhead
-- Eliminated ANGLE dependency on macOS
-- Direct Metal API access for future optimizations
-- Cleaner architecture with platform-specific implementations
+- Native performance without any translation overhead
+- Minimal dependencies (only system graphics libraries)
+- Direct API access for platform-specific optimizations
+- Clean, lean MVP architecture
 - Better alignment with MapLibre's native platform support
 
-### Lessons Learned
-- GLFW Metal backend pattern works perfectly for JAWT integration
-- MetalRenderableResource must be in mbgl namespace (exact GLFW structure)
-- CAMetalLayer assignment to JAWT surface layers works seamlessly
-- Initial render and scale issues need further investigation
+### Current Known Issues
+1. **Initial render bug**: Map doesn't display until window is resized
+2. **Pixel ratio bug**: Scale factor not applied correctly on initial render
+3. **Render strategy**: Currently rendering at 60fps continuously (need to investigate on-demand)
 
 ## Metal Backend Implementation Notes (2025-08-03)
 
@@ -212,73 +213,3 @@ Successfully implemented native Metal backend by:
 - Command queue and buffers managed per GLFW pattern
 - Depth and stencil textures created with proper Metal usage flags
 
-## Original macOS Support Research (2025-08-02)
-
-### Problem
-OpenGL ES is not available on macOS, requiring an alternative rendering approach.
-
-### Option 1: ANGLE (OpenGL ES → Metal)
-
-**Overview**: Use Google's ANGLE library to translate OpenGL ES calls to Metal
-
-**Pros:**
-- Minimal code changes - keep existing OpenGL ES renderer backend
-- ANGLE has mature Metal backend (used by Chrome/Firefox on macOS)
-- Existing Java bindings available (JANGLE project)
-- Works with current JOGL-based architecture
-- Drop-in replacement for OpenGL ES context
-
-**Cons:**
-- Additional dependency and translation layer overhead
-- Requires building/bundling ANGLE libraries
-- Performance overhead from API translation
-- Less control over Metal optimizations
-- Another layer of abstraction to debug
-
-**Implementation Steps:**
-1. Build ANGLE with Metal backend for macOS
-2. Replace JOGL's GL context with ANGLE's EGL context
-3. Use JANGLE or create JNI bindings for ANGLE's EGL
-4. Minimal changes to existing renderer backend code
-
-### Option 2: Vulkan/MoltenVK (Recommended)
-
-**Overview**: Use MapLibre's Vulkan renderer with MoltenVK for Metal translation
-
-**Pros:**
-- MapLibre already has complete, production-ready Vulkan renderer backend
-- Better performance (direct to Metal via MoltenVK)
-- More future-proof (Vulkan is actively developed)
-- Existing Java bindings available (LWJGL3-AWT)
-- Cross-platform consistency (same renderer on all platforms)
-- MoltenVK is officially supported by Khronos Group
-
-**Cons:**
-- Requires replacing OpenGL ES backend with Vulkan
-- Need to handle JAWT surface creation differently
-- More significant code changes required
-- Learning curve for Vulkan if unfamiliar
-
-**Implementation Steps:**
-1. Enable `MLN_WITH_VULKAN` in CMake, disable `MLN_WITH_OPENGL`
-2. Create JNI Vulkan backend similar to existing JOGL backend
-3. Use VkBootstrap for simplified Vulkan initialization
-4. Create Metal surface via MoltenVK and JAWT
-5. Option: Use LWJGL3-AWT for Java Vulkan bindings (or custom JNI)
-
-### Recommendation: Vulkan/MoltenVK Approach
-
-**Reasoning:**
-1. MapLibre's Vulkan backend is production-ready and actively maintained
-2. Better long-term maintainability (single renderer path)
-3. Superior performance characteristics
-4. Aligns with industry direction (Apple deprecated OpenGL)
-5. Vulkan provides more control and debugging capabilities
-6. MoltenVK is transparent - no code changes needed for macOS
-
-**Key Implementation Details:**
-- Use VkBootstrap to simplify Vulkan initialization (removes ~400 lines of boilerplate)
-- MoltenVK handles Vulkan→Metal translation transparently
-- JAWT provides native window handle for surface creation
-- Can leverage existing GLFW Vulkan backend as reference implementation
-- Consider LWJGL3-AWT's AWTVKCanvas for simpler integration

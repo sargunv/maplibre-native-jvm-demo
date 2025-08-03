@@ -1,15 +1,15 @@
 # maplibre-native-jvm-demo
 
-This project demos the integration of MapLibre Native with a Kotlin JVM application using JNI. It provides a basic setup to render maps using OpenGL ES 3.2 and JOGL.
+This project demos the integration of MapLibre Native with a Kotlin JVM application using JNI. It provides a cross-platform setup to render maps using native graphics APIs (Metal on macOS, OpenGL ES on Linux).
 
 Be aware that the code is rough and not production-ready. It is intended for educational purposes to demonstrate how to set up MapLibre Native in a JAWT window.
 
 ### What works now
-- Complete rendering pipeline: Map → Frontend → Backend → JOGL → Display
+- Complete rendering pipeline: Map → Frontend → Backend → Native API → Display
 - Network resource loading: Remote styles and tiles load successfully
 - Async event processing: RunLoop processes callbacks in render loop
 - MapLibre initialization: All components initialize successfully
-- OpenGL ES compatibility: Proper OpenGL ES 3.2 context with framebuffer config
+- Native rendering: Metal on macOS, OpenGL ES on Linux
 - Map observer callbacks: All events fire correctly (style loaded, map loaded, etc.)
 
 ### What isn't yet implemented

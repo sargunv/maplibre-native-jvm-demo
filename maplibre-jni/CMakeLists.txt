@@ -23,7 +23,7 @@ if(APPLE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 else()
-    # Use OpenGL ES backend on Linux/Windows
+    # Use OpenGL ES backend on Linux
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
@@ -65,10 +65,9 @@ if(APPLE)
         src/main/cpp/jni_metal_backend.mm
     )
 else()
-    # OpenGL ES backend for Linux/Windows
+    # OpenGL ES backend for Linux
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/jni_gl_backend.cpp
-        src/main/cpp/jni_gl_functions.cpp
     )
 endif()
 
@@ -90,17 +89,6 @@ if(APPLE)
     )
 endif()
 
-# Add platform-specific include directories
-if(NOT APPLE)
-    # EGL headers for Linux/Windows
-    find_package(PkgConfig)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(EGL egl)
-        if(EGL_FOUND)
-            target_include_directories(maplibre-jni PRIVATE ${EGL_INCLUDE_DIRS})
-        endif()
-    endif()
-endif()
 
 # Compile options (will inherit from mbgl-compiler-options)
 target_compile_options(maplibre-jni PRIVATE
@@ -128,8 +116,6 @@ if(APPLE)
         "-framework QuartzCore"
         "-framework Metal"
     )
-elseif(WIN32)
-    target_link_libraries(maplibre-jni PRIVATE ${JAVA_HOME}/lib/jawt.lib)
 else()
     # Linux
     find_library(JAWT_LIBRARY jawt HINTS ${JAVA_HOME}/lib ${JAVA_HOME}/jre/lib/amd64)
@@ -140,52 +126,24 @@ endif()
 
 # Platform-specific graphics library linking
 if(NOT APPLE)
-    # Linux/Windows: Link against EGL/OpenGL ES libraries
-    if(WIN32)
-        # Windows: Use bundled ANGLE libraries if available
-        if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/windows/libEGL.lib)
-            target_link_libraries(maplibre-jni PRIVATE
-                ${CMAKE_CURRENT_SOURCE_DIR}/../libs/windows/libEGL.lib
-                ${CMAKE_CURRENT_SOURCE_DIR}/../libs/windows/libGLESv2.lib
-            )
-        else()
-            # Try to find system EGL/GLES libraries
-            find_library(EGL_LIBRARY EGL)
-            find_library(GLES2_LIBRARY GLESv2)
-            if(EGL_LIBRARY AND GLES2_LIBRARY)
-                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY} ${GLES2_LIBRARY})
-            else()
-                message(FATAL_ERROR "Could not find EGL and GLESv2 libraries")
-            endif()
-        endif()
+    # Linux: Link against EGL/OpenGL ES libraries
+    find_package(PkgConfig)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(EGL egl)
+        pkg_check_modules(GLES2 glesv2)
+    endif()
+    
+    if(EGL_FOUND AND GLES2_FOUND)
+        target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARIES} ${GLES2_LIBRARIES})
+        target_include_directories(maplibre-jni PRIVATE ${EGL_INCLUDE_DIRS} ${GLES2_INCLUDE_DIRS})
     else()
-        # Linux: Try system EGL first, fallback to bundled ANGLE
-        find_package(PkgConfig)
-        if(PkgConfig_FOUND)
-            pkg_check_modules(EGL egl)
-            pkg_check_modules(GLES2 glesv2)
-        endif()
-        
-        if(EGL_FOUND AND GLES2_FOUND)
-            target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARIES} ${GLES2_LIBRARIES})
-            target_include_directories(maplibre-jni PRIVATE ${EGL_INCLUDE_DIRS} ${GLES2_INCLUDE_DIRS})
+        # Fallback to searching for libraries manually
+        find_library(EGL_LIBRARY EGL)
+        find_library(GLES2_LIBRARY GLESv2)
+        if(EGL_LIBRARY AND GLES2_LIBRARY)
+            target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY} ${GLES2_LIBRARY})
         else()
-            # Fallback to searching for libraries manually
-            find_library(EGL_LIBRARY EGL)
-            find_library(GLES2_LIBRARY GLESv2)
-            if(EGL_LIBRARY AND GLES2_LIBRARY)
-                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY} ${GLES2_LIBRARY})
-            else()
-                # Try bundled ANGLE as last resort
-                if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../libs/linux/libEGL.so)
-                    target_link_libraries(maplibre-jni PRIVATE
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../libs/linux/libEGL.so
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../libs/linux/libGLESv2.so
-                    )
-                else()
-                    message(FATAL_ERROR "Could not find EGL and GLESv2 libraries. Install Mesa or ANGLE.")
-                endif()
-            endif()
+            message(FATAL_ERROR "Could not find EGL and GLESv2 libraries. Install Mesa development packages.")
         endif()
     endif()
 endif()
