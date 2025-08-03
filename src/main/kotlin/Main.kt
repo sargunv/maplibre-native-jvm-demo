@@ -43,15 +43,18 @@ fun main() {
                 try {
                     runLoop = RunLoop()
                     
-                    // Create JAWT backend (automatically selects Metal on macOS, OpenGL ES on Linux/Windows)
-                    // On macOS with Retina displays, we need to use the actual pixel dimensions
+                    // Calculate pixel ratio and dimensions BEFORE creating components
+                    // This matches how GLFW handles it: framebuffer size / window size
                     val scale = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
                     val pixelWidth = (canvas.width * scale).toInt()
                     val pixelHeight = (canvas.height * scale).toInt()
                     
                     println("Canvas size: ${canvas.width}x${canvas.height}, scale: $scale, pixel size: ${pixelWidth}x${pixelHeight}")
                     
+                    // Create backend with pixel dimensions (framebuffer size)
                     backend = JAWTRendererBackend(canvas, pixelWidth, pixelHeight)
+                    
+                    // Create frontend with proper pixel ratio
                     frontend = RendererFrontend(backend.getRendererBackend(), scale)
                     
                     val observer = object : MapObserver {
@@ -120,8 +123,8 @@ fun main() {
                         .withViewportMode(ViewportMode.DEFAULT)
                         .withConstrainMode(ConstrainMode.HEIGHT_ONLY)
                         .withCrossSourceCollisions(true)
-                        .withPixelRatio(1.0f)
-                        .withSize(Size(canvas.width, canvas.height))
+                        .withPixelRatio(scale)  // Use calculated pixel ratio
+                        .withSize(Size(pixelWidth, pixelHeight))  // Use pixel dimensions
                     
                     map = MaplibreMap(
                         rendererFrontend = frontend,
