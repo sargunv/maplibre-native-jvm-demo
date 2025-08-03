@@ -18,7 +18,7 @@ fun main() {
         // MapLibre components
         var runLoop: RunLoop? = null
         var map: MaplibreMap? = null
-        var backend: EGLRendererBackend? = null
+        var backend: JAWTRendererBackend? = null
         var frontend: RendererFrontend? = null
         
         // Initialize when canvas is ready
@@ -43,7 +43,7 @@ fun main() {
                 try {
                     runLoop = RunLoop()
                     
-                    // Create EGL backend (handles all platform-specific setup internally)
+                    // Create JAWT backend (automatically selects Metal on macOS, OpenGL ES on Linux/Windows)
                     // On macOS with Retina displays, we need to use the actual pixel dimensions
                     val scale = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
                     val pixelWidth = (canvas.width * scale).toInt()
@@ -51,8 +51,8 @@ fun main() {
                     
                     println("Canvas size: ${canvas.width}x${canvas.height}, scale: $scale, pixel size: ${pixelWidth}x${pixelHeight}")
                     
-                    backend = EGLRendererBackend(canvas, pixelWidth, pixelHeight)
-                    frontend = RendererFrontend(backend.nativePtr, scale)
+                    backend = JAWTRendererBackend(canvas, pixelWidth, pixelHeight)
+                    frontend = RendererFrontend(backend.getRendererBackend(), scale)
                     
                     val observer = object : MapObserver {
                         override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
@@ -147,7 +147,12 @@ fun main() {
                         .withPitch(0.0)
                     map?.jumpTo(cameraOptions)
                     
-                    println("✅ MapLibre initialized with EGL backend")
+                    val osName = System.getProperty("os.name")
+                    val backendName = when {
+                        osName.contains("Mac", ignoreCase = true) -> "Metal"
+                        else -> "OpenGL ES"
+                    }
+                    println("✅ MapLibre initialized with $backendName backend")
                     
                 } catch (e: Exception) {
                     println("❌ Failed to initialize MapLibre: ${e.message}")
@@ -165,7 +170,7 @@ fun main() {
         }
         
         // Create window
-        val frame = JFrame("MapLibre Native JVM Demo - EGL Backend")
+        val frame = JFrame("MapLibre Native JVM Demo")
         frame.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
         frame.layout = BorderLayout()
         frame.add(canvas, BorderLayout.CENTER)

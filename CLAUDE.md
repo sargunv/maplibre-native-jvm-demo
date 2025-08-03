@@ -7,25 +7,25 @@ This project creates JVM bindings for MapLibre Native using direct C++ JNI, enab
 - **MapLibre Native**: C++ map rendering engine
 - **C++ JNI Layer**: Direct JNI bindings to MapLibre types
 - **Kotlin API**: High-level API for Java/Kotlin developers with automatic memory management
-- **EGL Backend**: Cross-platform OpenGL ES context management (ANGLE on macOS/Windows, Mesa on Linux)
+- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux/Windows
 
 ## Build System
 Uses CMake to build MapLibre from source with custom JNI code:
 - **MapLibre Native as Git Submodule**: At `vendor/maplibre-native`
 - **CMake Integration**: Single CMakeLists.txt builds both MapLibre and JNI code
 
-## Current Status (2025-08-02)
+## Current Status (2025-08-03)
 
 ### What Works Now
-- ✅ **Complete rendering pipeline**: Map → Frontend → Backend → EGL → Display
-- ✅ **Cross-platform EGL backend**: Unified rendering backend using EGL on all platforms
-- ✅ **ANGLE integration on macOS**: OpenGL ES via Metal using ANGLE libraries
+- ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
+- ✅ **Native Metal backend on macOS**: Direct Metal rendering without ANGLE translation layer
+- ✅ **OpenGL ES backend on Linux/Windows**: Using EGL for context management
+- ✅ **Cross-platform JAWT integration**: Unified JAWTRendererBackend with platform-specific implementations
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
 - ✅ **Map observer callbacks**: All events fire correctly (style loaded, map loaded, etc.)
-- ✅ **Retina display support**: Proper scaling for high-DPI displays on macOS
-- ✅ **Static rendering without flickering**: Fixed double-buffering issues
+- ✅ **Static rendering**: Map renders correctly after window resize
 
 ### What Isn't Yet Implemented
 - ❌ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
@@ -33,7 +33,11 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
-- ⚠️ **Resize flickering**: Window resize events still cause flickering
+
+### Known Rendering Issues
+- ⚠️ **Initial render**: Map doesn't render until first window resize
+- ⚠️ **Pixel ratio**: Scale factor not correctly applied on initial render
+- ⚠️ **Render strategy unclear**: Continuous 60fps rendering vs on-demand rendering when map is dirty
 
 ### Architecture Status
 ```
@@ -41,11 +45,11 @@ Uses CMake to build MapLibre from source with custom JNI code:
     ↓
 ✅ JAWT (Native window handle extraction)
     ↓
-✅ EGL Context (ANGLE on macOS/Windows, Mesa on Linux)
+✅ Platform Backend (Metal on macOS, EGL/OpenGL ES on Linux/Windows)
     ↓
 ✅ RunLoop (processes async events)
     ↓
-✅ EGLRendererBackend (C++, ContextMode::Unique)
+✅ JAWTRendererBackend (C++, ContextMode::Unique)
     ↓
 ✅ RendererFrontend (C++)
     ↓
@@ -67,10 +71,12 @@ Uses CMake to build MapLibre from source with custom JNI code:
    - Offline map support
    - Style switching at runtime
 
-### Known Issues
-- Memory cleanup disabled to avoid crashes (needs investigation)
-- No user interaction implemented yet
-- Flickering occurs during window resize (surface updates not synchronized with render loop)
+### Immediate Issues to Fix
+1. **Initial render bug**: Map doesn't display until window is resized
+2. **Pixel ratio bug**: Initial scale factor not applied correctly
+3. **Render loop inefficiency**: Currently rendering at 60fps continuously, unclear if necessary
+4. **Memory cleanup**: Disabled to avoid crashes (needs investigation)
+5. **No user interaction**: Mouse/keyboard controls not implemented
 
 ## Technical Implementation Details
 
@@ -82,18 +88,18 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - **Framebuffer**: Explicit RGBA8/stencil8/depth16 configuration needed
 - **Render Order**: Let MapLibre handle clearing, don't override with manual clears
 
-#### EGL/ANGLE Integration (2025-08-02)
-- **Unified EGL Backend**: Replaced JOGL with direct EGL for cross-platform consistency
-- **ANGLE on macOS**: Successfully using ANGLE to provide OpenGL ES via Metal backend
+#### Native Metal Integration (2025-08-03)
+- **Native Metal Backend**: Replaced ANGLE with direct Metal rendering on macOS
+- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux/Windows
 - **JAWT Version 9**: Required for modern Java (version constant: 0x00090000)
-- **CALayer Extraction**: macOS requires Objective-C++ to properly extract CALayer from JAWT
-- **Retina Scaling**: Must account for backing scale factor (2x on Retina displays)
+- **CALayer Assignment**: Direct assignment of Metal layer to JAWT surface layers
+- **GLFW Pattern**: Metal backend mimics GLFW implementation exactly for consistency
 
-#### Flickering Fixes
+#### Rendering Issues and Fixes
 - **Remove canvas.repaint()**: AWT's repaint was causing buffer clearing and flickering
 - **Single render path**: Only render in timer loop, not in observer callbacks
-- **VSync enabled**: `eglSwapInterval(display, 1)` helps prevent tearing
-- **Resize issue remains**: Rapid surface updates during resize still cause flickering
+- **Initial render bug**: Map doesn't display until window resize (needs investigation)
+- **Scale factor bug**: Pixel ratio not applied correctly on initial render
 
 ### JNI Implementation Pattern
 ```cpp
@@ -126,20 +132,21 @@ open class NativeObject internal constructor(
 - Java Development Kit (JDK 11+)
 - CMake 3.21+
 - Platform-specific:
-  - **macOS**: ANGLE libraries (auto-downloaded via CMake)
+  - **macOS**: Metal framework (included with Xcode)
   - **Linux**: Mesa EGL/OpenGL ES or ANGLE
   - **Windows**: ANGLE libraries for D3D11 backend
 
 ## Project Structure
 ```
 maplibre-jni/
-├── CMakeLists.txt              # CMake build configuration with ANGLE integration
+├── CMakeLists.txt              # CMake build configuration with platform conditionals
 ├── build.gradle.kts            # Gradle with CMake integration
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
     ├── jni_*_types.cpp         # Core type wrappers
-    ├── jni_egl_backend.cpp     # Unified EGL backend
-    ├── jni_egl_backend_macos.mm # macOS-specific CALayer extraction
+    ├── jni_jawt_backend.hpp    # Base JAWT backend interface
+    ├── jni_metal_backend.mm    # Metal backend for macOS
+    ├── jni_gl_backend.cpp      # OpenGL ES backend for Linux/Windows
     ├── jni_renderer_frontend_impl.cpp  # Renderer frontend
     └── jni_maplibre_map.cpp    # Map and observer wrappers
 
@@ -148,7 +155,7 @@ src/main/kotlin/
     ├── NativeObject.kt         # Base class with automatic cleanup
     ├── *Types.kt               # MapLibre type wrappers
     ├── MapObserver.kt          # Event callbacks
-    ├── EGLRendererBackend.kt   # EGL backend wrapper
+    ├── JAWTRendererBackend.kt  # Platform-agnostic backend wrapper
     └── MaplibreMap.kt          # Main map API
 
 src/main/kotlin/Main.kt         # Demo application
@@ -164,31 +171,46 @@ src/main/kotlin/Main.kt         # Demo application
 ### Build and Development Notes
 - Never do a ./gradlew clean. This requires rebuilding maplibre native from scratch, which takes a long time.
 
-## Implementation Decision: Unified EGL Backend (2025-08-02)
+## Implementation Decision: Native Metal Backend (2025-08-03)
 
 ### Decision
-Implemented a unified EGL backend across all platforms, dropping the JOGL dependency in favor of direct EGL/ANGLE integration.
+Dropped ANGLE dependency on macOS in favor of native Metal backend, while keeping OpenGL ES via EGL for Linux/Windows.
 
 ### Implementation Details
-- **macOS**: Using ANGLE's Metal backend via EGL
-- **Windows**: Using ANGLE's D3D11 backend via EGL
-- **Linux**: Using system Mesa EGL or ANGLE's OpenGL backend
-- **JAWT Integration**: Direct native window handle extraction for all platforms
-- **ANGLE Libraries**: Downloaded automatically via CMake FetchContent on macOS
+- **macOS**: Direct Metal backend mimicking GLFW implementation
+- **Windows**: OpenGL ES via ANGLE's D3D11 backend and EGL
+- **Linux**: System Mesa EGL or ANGLE's OpenGL backend
+- **JAWT Integration**: Platform-specific backend selection at compile time
+- **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
 
 ### Benefits Achieved
-- Single codebase for all platforms
-- Better control over rendering pipeline
-- Eliminated JOGL dependency and its limitations
-- Direct access to native window handles via JAWT
-- Proper Retina/HiDPI support
+- Native performance on macOS without translation overhead
+- Eliminated ANGLE dependency on macOS
+- Direct Metal API access for future optimizations
+- Cleaner architecture with platform-specific implementations
+- Better alignment with MapLibre's native platform support
 
 ### Lessons Learned
-- JAWT version 9 (0x00090000) required for modern Java
-- macOS requires Objective-C++ for proper CALayer extraction
-- ANGLE libraries must be extracted to same directory for proper loading
-- Removing canvas.repaint() calls eliminated flickering
-- Window resize events need special handling to prevent flickering
+- GLFW Metal backend pattern works perfectly for JAWT integration
+- MetalRenderableResource must be in mbgl namespace (exact GLFW structure)
+- CAMetalLayer assignment to JAWT surface layers works seamlessly
+- Initial render and scale issues need further investigation
+
+## Metal Backend Implementation Notes (2025-08-03)
+
+### Implementation Approach
+Successfully implemented native Metal backend by:
+1. Studying GLFW Metal backend implementation
+2. Mimicking GLFW structure exactly (namespace, class hierarchy)
+3. Adapting JAWT surface layer assignment pattern from GLFW's NSWindow approach
+4. Using CMake conditionals for platform-specific compilation
+
+### Key Technical Details
+- Metal backend inherits from `mbgl::mtl::RendererBackend` and `mbgl::gfx::Renderable`
+- MetalRenderableResource in `mbgl` namespace (required for proper integration)
+- CAMetalLayer created and assigned to JAWT surface layers
+- Command queue and buffers managed per GLFW pattern
+- Depth and stencil textures created with proper Metal usage flags
 
 ## Original macOS Support Research (2025-08-02)
 

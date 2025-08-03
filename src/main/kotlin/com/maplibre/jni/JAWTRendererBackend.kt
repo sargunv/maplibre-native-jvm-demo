@@ -3,11 +3,10 @@ package com.maplibre.jni
 import java.awt.Canvas
 
 /**
- * EGL-based renderer backend that works on all platforms.
- * Uses ANGLE on macOS/Windows for Metal/D3D11 support,
- * and native EGL on Linux.
+ * Platform-specific renderer backend using JAWT for native window access.
+ * Uses Metal on macOS and OpenGL ES (via EGL) on Linux/Windows.
  */
-class EGLRendererBackend(
+class JAWTRendererBackend(
     canvas: Canvas,
     width: Int,
     height: Int
@@ -24,6 +23,10 @@ class EGLRendererBackend(
         nativeSwap(nativePtr)
     }
     
+    internal fun getRendererBackend(): Long {
+        return nativeGetRendererBackend(nativePtr)
+    }
+    
     companion object {
         @JvmStatic
         private external fun nativeCreate(canvas: Canvas, width: Int, height: Int): Long
@@ -36,5 +39,8 @@ class EGLRendererBackend(
         
         @JvmStatic
         private external fun nativeSwap(ptr: Long)
+        
+        @JvmStatic
+        private external fun nativeGetRendererBackend(ptr: Long): Long
     }
 }

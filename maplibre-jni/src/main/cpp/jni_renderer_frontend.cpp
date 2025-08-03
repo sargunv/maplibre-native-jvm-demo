@@ -1,6 +1,5 @@
 #include "generated/kotlin/main/com_maplibre_jni_RendererFrontend.h"
 #include "jni_renderer_frontend.hpp"
-#include "jni_egl_backend.hpp"
 #include "jni_helpers.hpp"
 
 extern "C" {

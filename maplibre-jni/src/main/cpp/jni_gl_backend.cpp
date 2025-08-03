@@ -1,4 +1,6 @@
-#include "jni_egl_backend.hpp"
+#ifndef __APPLE__
+
+#include "jni_gl_backend.hpp"
 #include <mbgl/gl/renderable_resource.hpp>
 #include <mbgl/util/instrumentation.hpp>
 #include <mbgl/util/logging.hpp>
@@ -18,19 +20,7 @@
 #endif
 
 // Platform-specific includes
-#ifdef __APPLE__
-    #include <dlfcn.h>
-    // For ANGLE Metal backend selection
-    #ifndef EGL_PLATFORM_ANGLE_ANGLE
-        #define EGL_PLATFORM_ANGLE_ANGLE 0x3202
-    #endif
-    #ifndef EGL_PLATFORM_ANGLE_TYPE_ANGLE
-        #define EGL_PLATFORM_ANGLE_TYPE_ANGLE 0x3203
-    #endif
-    #ifndef EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE
-        #define EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE 0x3489
-    #endif
-#elif _WIN32
+#ifdef _WIN32
     #include <windows.h>
     #ifndef EGL_PLATFORM_ANGLE_ANGLE
         #define EGL_PLATFORM_ANGLE_ANGLE 0x3202
@@ -45,10 +35,10 @@
 
 namespace maplibre_jni {
 
-// Custom renderable resource for EGL backend
-class EGLRenderableResource final : public mbgl::gl::RenderableResource {
+// Custom renderable resource for GL backend
+class GLRenderableResource final : public mbgl::gl::RenderableResource {
 public:
-    explicit EGLRenderableResource(EGLRendererBackend& backend_)
+    explicit GLRenderableResource(GLBackend& backend_)
         : backend(backend_) {}
 
     void bind() override {
@@ -72,24 +62,18 @@ public:
     }
 
 private:
-    EGLRendererBackend& backend;
+    GLBackend& backend;
 };
 
-EGLRendererBackend::EGLRendererBackend(JNIEnv* env, jobject canvas, int width, int height)
+GLBackend::GLBackend(JNIEnv* env, jobject canvas, int width_, int height_)
     : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique),
-      mbgl::gfx::Renderable(mbgl::Size{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) },
-                           std::make_unique<EGLRenderableResource>(*this)) {
+      mbgl::gfx::Renderable(mbgl::Size{ static_cast<uint32_t>(width_), static_cast<uint32_t>(height_) },
+                           std::make_unique<GLRenderableResource>(*this)),
+      JAWTRendererBackend(env, canvas, width_, height_) {
     
-    // Get JavaVM
-    if (env->GetJavaVM(&jvm) != JNI_OK) {
-        throw std::runtime_error("Failed to get JavaVM");
-    }
-    
-    // Create global reference to canvas
-    canvasRef = env->NewGlobalRef(canvas);
-    if (!canvasRef) {
-        throw std::runtime_error("Failed to create global reference to canvas");
-    }
+    // Store dimensions
+    width = width_;
+    height = height_;
     
     // Get native window handle
     nativeWindow = getNativeWindowHandle(env, canvas);
@@ -102,7 +86,7 @@ EGLRendererBackend::EGLRendererBackend(JNIEnv* env, jobject canvas, int width, i
     initializeEGL();
 }
 
-EGLRendererBackend::~EGLRendererBackend() {
+GLBackend::~GLBackend() {
     // Clean up EGL resources
     if (display != EGL_NO_DISPLAY) {
         eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -128,7 +112,7 @@ EGLRendererBackend::~EGLRendererBackend() {
     }
 }
 
-void* EGLRendererBackend::getNativeWindowHandle(JNIEnv* env, jobject canvas) {
+void* GLBackend::getNativeWindowHandle(JNIEnv* env, jobject canvas) {
 #ifdef __APPLE__
     // On macOS, use the Objective-C++ implementation
     return getNativeWindowHandleMacOS(env, canvas);
@@ -191,7 +175,7 @@ void* EGLRendererBackend::getNativeWindowHandle(JNIEnv* env, jobject canvas) {
 #endif // !__APPLE__
 }
 
-void EGLRendererBackend::releaseNativeWindowHandle() {
+void GLBackend::releaseNativeWindowHandle() {
 #ifdef __APPLE__
     releaseNativeWindowHandleMacOS();
 #else
@@ -200,7 +184,7 @@ void EGLRendererBackend::releaseNativeWindowHandle() {
 #endif
 }
 
-EGLDisplay EGLRendererBackend::getPlatformDisplay() {
+EGLDisplay GLBackend::getPlatformDisplay() {
     EGLDisplay platformDisplay = EGL_NO_DISPLAY;
     
 #ifdef __APPLE__
@@ -243,7 +227,7 @@ EGLDisplay EGLRendererBackend::getPlatformDisplay() {
     return platformDisplay;
 }
 
-void EGLRendererBackend::initializeEGL() {
+void GLBackend::initializeEGL() {
     // Get platform-specific display
     display = getPlatformDisplay();
     if (display == EGL_NO_DISPLAY) {
@@ -324,7 +308,7 @@ void EGLRendererBackend::initializeEGL() {
     }
 }
 
-JNIEnv* EGLRendererBackend::getEnv() {
+JNIEnv* GLBackend::getEnv() {
     JNIEnv* env = nullptr;
     jint result = jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
     
@@ -338,7 +322,7 @@ JNIEnv* EGLRendererBackend::getEnv() {
     return env;
 }
 
-void EGLRendererBackend::activate() {
+void GLBackend::activate() {
     MLN_TRACE_FUNC();
     
     if (!eglMakeCurrent(display, surface, surface, context)) {
@@ -346,13 +330,13 @@ void EGLRendererBackend::activate() {
     }
 }
 
-void EGLRendererBackend::deactivate() {
+void GLBackend::deactivate() {
     MLN_TRACE_FUNC();
     
     eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 }
 
-void EGLRendererBackend::updateAssumedState() {
+void GLBackend::updateAssumedState() {
     MLN_TRACE_FUNC();
     
     // Update assumed OpenGL state
@@ -360,18 +344,25 @@ void EGLRendererBackend::updateAssumedState() {
     setViewport(0, 0, size);
 }
 
-mbgl::gl::ProcAddress EGLRendererBackend::getExtensionFunctionPointer(const char* name) {
+mbgl::gl::ProcAddress GLBackend::getExtensionFunctionPointer(const char* name) {
     MLN_TRACE_FUNC();
     
     return reinterpret_cast<mbgl::gl::ProcAddress>(eglGetProcAddress(name));
 }
 
-void EGLRendererBackend::updateSize(int width, int height) {
+void GLBackend::updateSize(int width, int height) {
     size = mbgl::Size{ static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
-void EGLRendererBackend::swap() {
+void GLBackend::swap() {
     eglSwapBuffers(display, surface);
 }
 
+// Factory function implementation for Linux/Windows
+std::unique_ptr<JAWTRendererBackend> createPlatformBackend(JNIEnv* env, jobject canvas, int width, int height) {
+    return std::make_unique<GLBackend>(env, canvas, width, height);
+}
+
 } // namespace maplibre_jni
+
+#endif // !__APPLE__

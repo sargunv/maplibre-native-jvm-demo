@@ -1,9 +1,11 @@
 #pragma once
 
+#include "jni_jawt_backend.hpp"
 #include <mbgl/gl/renderer_backend.hpp>
 #include <mbgl/gfx/renderable.hpp>
-#include <jni.h>
 #include <memory>
+
+#ifndef __APPLE__
 
 // Platform-agnostic EGL includes
 #include <EGL/egl.h>
@@ -11,20 +13,21 @@
 
 namespace maplibre_jni {
 
-// EGL-based OpenGL ES renderer backend that works on all platforms
-class EGLRendererBackend : public mbgl::gl::RendererBackend, public mbgl::gfx::Renderable {
+// OpenGL ES renderer backend for Linux/Windows using EGL
+class GLBackend : public mbgl::gl::RendererBackend, 
+                  public mbgl::gfx::Renderable,
+                  public JAWTRendererBackend {
 public:
-    EGLRendererBackend(JNIEnv* env, jobject canvas, int width, int height);
-    ~EGLRendererBackend() override;
+    GLBackend(JNIEnv* env, jobject canvas, int width, int height);
+    ~GLBackend() override;
 
+    // JAWTRendererBackend implementation
+    void updateSize(int width, int height) override;
+    void swap() override;
+    void* getRendererBackend() override { return static_cast<mbgl::gl::RendererBackend*>(this); }
+    
     // gfx::RendererBackend implementation
     mbgl::gfx::Renderable& getDefaultRenderable() override { return *this; }
-    
-    // Called when the view size changes
-    void updateSize(int width, int height);
-    
-    // Method to swap buffers (called after rendering)
-    void swap();
     
 protected:
     // gfx::RendererBackend implementation
@@ -45,28 +48,19 @@ private:
     // Native window handle
     void* nativeWindow = nullptr;
     
-    // JNI references
-    JavaVM* jvm = nullptr;
-    jobject canvasRef = nullptr;  // Global reference to the Java canvas
-    
     // Helper methods
     void initializeEGL();
     void* getNativeWindowHandle(JNIEnv* env, jobject canvas);
     void releaseNativeWindowHandle();
-    JNIEnv* getEnv();
     
     // Platform-specific EGL setup
     EGLDisplay getPlatformDisplay();
     
-#ifdef __APPLE__
-    // macOS-specific methods for handling CALayer
-    void* getNativeWindowHandleMacOS(JNIEnv* env, jobject canvas);
-    void releaseNativeWindowHandleMacOS();
-    
     // Store JAWT structures for cleanup
     void* jawtDrawingSurface = nullptr;
     void* jawtDrawingSurfaceInfo = nullptr;
-#endif
 };
 
 } // namespace maplibre_jni
+
+#endif // !__APPLE__
