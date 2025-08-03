@@ -1,16 +1,17 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**"
             ],
             "defines": [],
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64",
+            "intelliSenseMode": "macos-clang-arm64",
+            "compilerPath": "/usr/bin/c++",
             "compileCommands": [
-                "${workspaceFolder}/compile_commands.json"
+                "./maplibre-jni/build/cmake/compile_commands.json"
             ]
         }
     ],

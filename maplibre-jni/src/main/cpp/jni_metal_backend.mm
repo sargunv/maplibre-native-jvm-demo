@@ -12,6 +12,7 @@
 #include <QuartzCore/CAMetalLayer.hpp>
 
 #import <Cocoa/Cocoa.h>
+#import <QuartzCore/CAMetalLayer.h>
 #include <jawt.h>
 #include <jawt_md.h>
 
@@ -169,9 +170,6 @@ MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width_, int height_)
       mbgl::gfx::Renderable(mbgl::Size{0, 0}, std::make_unique<mbgl::MetalRenderableResource>(*this)),
       JAWTRendererBackend(env, canvas, width_, height_) {
     setupMetalLayer(env, canvas);
-    
-    // CRITICAL: Set size explicitly after setup, matching GLFW pattern
-    // This ensures the Metal layer and renderable resource are properly sized
     setSize(mbgl::Size{static_cast<uint32_t>(width_), static_cast<uint32_t>(height_)});
 }
 
@@ -242,16 +240,26 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
         return;
     }
 
-    // This mimics what GLFW does: window.contentView.layer = metalLayer
     // Get the CAMetalLayer from our renderable resource
     CALayer* metalLayer = (__bridge CALayer*)getDefaultRenderable().getResource<mbgl::MetalRenderableResource>().getSwapchain().get();
+    CAMetalLayer* metalLayerTyped = (CAMetalLayer*)metalLayer;
+
+    // Configure the Metal layer properly
+    metalLayerTyped.opaque = YES;
+    metalLayerTyped.contentsScale = [[NSScreen mainScreen] backingScaleFactor];
+    metalLayerTyped.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    metalLayerTyped.framebufferOnly = YES;
+
+    // Without this, the map doesn't render until the window is resized
+    metalLayerTyped.frame = CGRectMake(0, 0, width / [[NSScreen mainScreen] backingScaleFactor],
+                                             height / [[NSScreen mainScreen] backingScaleFactor]);
+
+    // Set the layer
     surfaceLayers.layer = metalLayer;
 
     // Store references for cleanup
     jawtDrawingSurface = ds;
     jawtDrawingSurfaceInfo = dsi;
-
-    mbgl::Log::Info(mbgl::Event::OpenGL, "Metal layer configured successfully");
 }
 
 void MetalBackend::releaseNativeWindow() {

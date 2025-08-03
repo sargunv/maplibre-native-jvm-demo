@@ -9,22 +9,24 @@ import javax.swing.JFrame
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import kotlin.system.exitProcess
+import java.awt.Color
 
 fun main() {
   SwingUtilities.invokeLater {
     // Create a simple Canvas (no OpenGL initialization needed!)
     val canvas = Canvas()
+    canvas.background = Color.BLUE
 
     // MapLibre components
     var runLoop: RunLoop? = null
     var map: MaplibreMap? = null
     var backend: JAWTRendererBackend? = null
     var frontend: RendererFrontend? = null
-    
+
     // Rendering state
     var dirty = false
     val invalidate = { dirty = true }
-    
+
     // Spinner for visual feedback
     val spinnerFrames = listOf("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
     var spinnerIndex = 0
@@ -38,17 +40,16 @@ fun main() {
         if (!initialized && canvas.width > 0 && canvas.height > 0) {
           initialized = true
           initializeMapLibre()
-        } else if (initialized) {
-          // Update size with proper scaling for Retina displays
-          val scale =
-            canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat()
-              ?: 1.0f
-          val pixelWidth = (canvas.width * scale).toInt()
-          val pixelHeight = (canvas.height * scale).toInt()
-          backend?.updateSize(pixelWidth, pixelHeight)
-          map?.setSize(Size(pixelWidth, pixelHeight))
-          invalidate() // Request render after resize
         }
+        // Update size with proper scaling for Retina displays
+        val scale =
+          canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat()
+            ?: 1.0f
+        val pixelWidth = (canvas.width * scale).toInt()
+        val pixelHeight = (canvas.height * scale).toInt()
+        backend?.updateSize(pixelWidth, pixelHeight)
+        map?.setSize(Size(pixelWidth, pixelHeight))
+        invalidate() // Request render after resize
       }
 
       fun initializeMapLibre() {
@@ -182,16 +183,19 @@ fun main() {
 
     // Create window
     val frame = JFrame("MapLibre Native JVM Demo")
-    
+    frame.background = Color.RED
+
     // Create render timer
     val renderTimer = Timer(16) { // ~60 FPS
       runLoop?.runOnce()
-      
+
       // Only render when dirty (map has changes)
       if (dirty && frontend != null) {
         dirty = false
         frontend.render()
-        
+
+//        canvas.setSize(canvas.width + (frameCount % 2).toInt(), canvas.height)
+
         // Update spinner in title to show rendering activity
         frameCount++
         spinnerIndex = (spinnerIndex + 1) % spinnerFrames.size

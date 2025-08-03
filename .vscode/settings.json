@@ -70,5 +70,8 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "execution": "cpp"
-    }
+    },
+    "C_Cpp.default.compileCommands": [
+        "./maplibre-jni/build/cmake/compile_commands.json"
+    ]
 }

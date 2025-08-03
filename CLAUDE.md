@@ -36,8 +36,6 @@ Uses CMake to build MapLibre from source with custom JNI code:
 
 ### Known Rendering Issues
 - ⚠️ **Initial render**: Map doesn't render until first window resize
-- ⚠️ **Pixel ratio**: Scale factor not correctly applied on initial render
-- ⚠️ **Render strategy unclear**: Continuous 60fps rendering vs on-demand rendering when map is dirty
 
 ### Architecture Status
 ```
@@ -66,7 +64,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
 1. **User Interaction**: Add mouse/keyboard controls for pan, zoom, rotate
 2. **Performance Optimization**: Profile and optimize render loop
 3. **Memory Management**: Fix cleanup issues in dispose()
-4. **Additional Features**: 
+4. **Additional Features**:
    - Custom layers and sources
    - Offline map support
    - Style switching at runtime
@@ -180,7 +178,7 @@ Implemented native graphics backends for each platform without any translation l
 
 ### Implementation Details
 - **No ANGLE**: Removed all ANGLE dependencies, using native APIs directly
-- **No JOGL**: Removed JOGL dependency, using JAWT directly for window integration  
+- **No JOGL**: Removed JOGL dependency, using JAWT directly for window integration
 - **Platform-specific backends**: Metal on macOS, OpenGL ES on Linux
 - **JAWT Integration**: Direct native window handle extraction for supported platforms
 - **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
