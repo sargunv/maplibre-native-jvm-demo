@@ -15,41 +15,36 @@
 #include <jawt.h>
 #include <jawt_md.h>
 
-// Define JAWT_VERSION_9 if not available
-#ifndef JAWT_VERSION_9
-#define JAWT_VERSION_9 0x00090000
-#endif
-
 namespace maplibre_jni {
 
 // Metal backend implementation - mimics GLFW structure exactly
-class MetalBackend final : public mbgl::mtl::RendererBackend, 
+class MetalBackend final : public mbgl::mtl::RendererBackend,
                           public mbgl::gfx::Renderable,
                           public JAWTRendererBackend {
 public:
     MetalBackend(JNIEnv* env, jobject canvas, int width, int height);
     ~MetalBackend() override;
-    
+
     // JAWTRendererBackend implementation
     void updateSize(int width, int height) override;
     void swap() override;
     void* getRendererBackend() override { return static_cast<mbgl::mtl::RendererBackend*>(this); }
-    
+
     // mbgl::gfx::RendererBackend implementation
     mbgl::gfx::Renderable& getDefaultRenderable() override { return *this; }
-    
+
     // mbgl::mtl::RendererBackend implementation - exact copy from GLFW
     void activate() override {}
     void deactivate() override {}
     void updateAssumedState() override {}
-    
+
     void setSize(mbgl::Size size_);
     mbgl::Size getSize() const;
-    
+
 private:
     void setupMetalLayer(JNIEnv* env, jobject canvas);
     void releaseNativeWindow();
-    
+
     // JAWT structures
     void* jawtDrawingSurface = nullptr;
     void* jawtDrawingSurfaceInfo = nullptr;
@@ -70,27 +65,27 @@ public:
           swapchain(NS::TransferPtr(CA::MetalLayer::layer())) {
         swapchain->setDevice(backend.getDevice().get());
     }
-    
+
     void setBackendSize(mbgl::Size size_) {
         size = size_;
         swapchain->setDrawableSize({static_cast<CGFloat>(size.width), static_cast<CGFloat>(size.height)});
         buffersInvalid = true;
     }
-    
+
     mbgl::Size getSize() const {
         return size;
     }
-    
+
     void bind() override {
         surface = NS::TransferPtr(swapchain->nextDrawable());
         auto texSize = mbgl::Size{
             static_cast<uint32_t>(swapchain->drawableSize().width),
             static_cast<uint32_t>(swapchain->drawableSize().height)};
-        
+
         commandBuffer = NS::TransferPtr(commandQueue->commandBuffer());
         renderPassDescriptor = NS::TransferPtr(MTL::RenderPassDescriptor::renderPassDescriptor());
         renderPassDescriptor->colorAttachments()->object(0)->setTexture(surface->texture());
-        
+
         if (buffersInvalid || !depthTexture || !stencilTexture) {
             buffersInvalid = false;
             depthTexture = rendererBackend.getContext().createTexture2D();
@@ -100,7 +95,7 @@ public:
                 {gfx::TextureFilterType::Linear, gfx::TextureWrapType::Clamp, gfx::TextureWrapType::Clamp});
             static_cast<mtl::Texture2D*>(depthTexture.get())->setUsage(
                 MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsageRenderTarget);
-            
+
             stencilTexture = rendererBackend.getContext().createTexture2D();
             stencilTexture->setSize(texSize);
             stencilTexture->setFormat(gfx::TexturePixelType::Stencil, gfx::TextureChannelDataType::UnsignedByte);
@@ -109,7 +104,7 @@ public:
             static_cast<mtl::Texture2D*>(stencilTexture.get())
                 ->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsageRenderTarget);
         }
-        
+
         if (depthTexture) {
             depthTexture->create();
             if (auto* depthTarget = renderPassDescriptor->depthAttachment()) {
@@ -123,34 +118,34 @@ public:
             }
         }
     }
-    
+
     void swap() override {
         commandBuffer->presentDrawable(surface.get());
         commandBuffer->commit();
         commandBuffer.reset();
         renderPassDescriptor.reset();
     }
-    
+
     const mtl::RendererBackend& getBackend() const override {
         return rendererBackend;
     }
-    
+
     const mtl::MTLCommandBufferPtr& getCommandBuffer() const override {
         return commandBuffer;
     }
-    
+
     mtl::MTLBlitPassDescriptorPtr getUploadPassDescriptor() const override {
         return NS::TransferPtr(MTL::BlitPassDescriptor::alloc()->init());
     }
-    
+
     const mtl::MTLRenderPassDescriptorPtr& getRenderPassDescriptor() const override {
         return renderPassDescriptor;
     }
-    
+
     const CAMetalLayerPtr& getSwapchain() const {
         return swapchain;
     }
-    
+
 private:
     maplibre_jni::MetalBackend& rendererBackend;
     MTLCommandQueuePtr commandQueue;
@@ -174,6 +169,9 @@ MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width_, int height_)
       mbgl::gfx::Renderable(mbgl::Size{0, 0}, std::make_unique<mbgl::MetalRenderableResource>(*this)),
       JAWTRendererBackend(env, canvas, width_, height_) {
     setupMetalLayer(env, canvas);
+    
+    // CRITICAL: Set size explicitly after setup, matching GLFW pattern
+    // This ensures the Metal layer and renderable resource are properly sized
     setSize(mbgl::Size{static_cast<uint32_t>(width_), static_cast<uint32_t>(height_)});
 }
 
@@ -195,28 +193,28 @@ void MetalBackend::setSize(mbgl::Size size_) {
     getResource<mbgl::MetalRenderableResource>().setBackendSize(size_);
 }
 
-mbgl::Size MetalBackend::getSize() const { 
-    return getResource<mbgl::MetalRenderableResource>().getSize(); 
+mbgl::Size MetalBackend::getSize() const {
+    return getResource<mbgl::MetalRenderableResource>().getSize();
 }
 
 void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
     // Get JAWT
     JAWT awt;
     awt.version = JAWT_VERSION_9;
-    
+
     jboolean result = JAWT_GetAWT(env, &awt);
     if (result == JNI_FALSE) {
         mbgl::Log::Error(mbgl::Event::OpenGL, "JAWT_GetAWT failed");
         return;
     }
-    
+
     // Get the drawing surface
     JAWT_DrawingSurface* ds = awt.GetDrawingSurface(env, canvas);
     if (!ds) {
         mbgl::Log::Error(mbgl::Event::OpenGL, "GetDrawingSurface returned null");
         return;
     }
-    
+
     // Lock the drawing surface
     jint lock = ds->Lock(ds);
     if ((lock & JAWT_LOCK_ERROR) != 0) {
@@ -224,7 +222,7 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
         awt.FreeDrawingSurface(ds);
         return;
     }
-    
+
     // Get the drawing surface info
     JAWT_DrawingSurfaceInfo* dsi = ds->GetDrawingSurfaceInfo(ds);
     if (!dsi) {
@@ -233,7 +231,7 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
         awt.FreeDrawingSurface(ds);
         return;
     }
-    
+
     // Get the platform-specific info
     id<JAWT_SurfaceLayers> surfaceLayers = (id<JAWT_SurfaceLayers>)dsi->platformInfo;
     if (!surfaceLayers) {
@@ -243,16 +241,16 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
         awt.FreeDrawingSurface(ds);
         return;
     }
-    
+
     // This mimics what GLFW does: window.contentView.layer = metalLayer
     // Get the CAMetalLayer from our renderable resource
     CALayer* metalLayer = (__bridge CALayer*)getDefaultRenderable().getResource<mbgl::MetalRenderableResource>().getSwapchain().get();
     surfaceLayers.layer = metalLayer;
-    
+
     // Store references for cleanup
     jawtDrawingSurface = ds;
     jawtDrawingSurfaceInfo = dsi;
-    
+
     mbgl::Log::Info(mbgl::Event::OpenGL, "Metal layer configured successfully");
 }
 
@@ -261,7 +259,7 @@ void MetalBackend::releaseNativeWindow() {
         JAWT_DrawingSurface* ds = (JAWT_DrawingSurface*)jawtDrawingSurface;
         ds->FreeDrawingSurfaceInfo((JAWT_DrawingSurfaceInfo*)jawtDrawingSurfaceInfo);
         ds->Unlock(ds);
-        
+
         // Get JAWT to free the surface
         JAWT awt;
         awt.version = JAWT_VERSION_9;
@@ -269,7 +267,7 @@ void MetalBackend::releaseNativeWindow() {
         if (env && JAWT_GetAWT(env, &awt) != JNI_FALSE) {
             awt.FreeDrawingSurface(ds);
         }
-        
+
         jawtDrawingSurface = nullptr;
         jawtDrawingSurfaceInfo = nullptr;
     }
