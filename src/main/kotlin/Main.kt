@@ -68,8 +68,8 @@ fun main() {
           // Create backend with pixel dimensions (framebuffer size)
           backend = JAWTRendererBackend(canvas, pixelWidth, pixelHeight)
 
-          // Create frontend with proper pixel ratio
-          frontend = RendererFrontend(backend.getRendererBackend(), scale)
+          // Create frontend with proper pixel ratio and update callback
+          frontend = RendererFrontend(backend.getRendererBackend(), scale, invalidate)
 
           val observer = object : MapObserver {
             override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
@@ -79,7 +79,6 @@ fun main() {
             }
 
             override fun onCameraDidChange(mode: MapObserver.CameraChangeMode) {
-              invalidate()
             }
 
             override fun onWillStartLoadingMap() {
@@ -88,7 +87,6 @@ fun main() {
 
             override fun onDidFinishLoadingMap() {
               println("Did finish loading map")
-              invalidate()
             }
 
             override fun onDidFailLoadingMap(
@@ -118,7 +116,6 @@ fun main() {
 
             override fun onDidFinishLoadingStyle() {
               println("Map style loaded")
-              invalidate()
             }
           }
 
@@ -175,9 +172,6 @@ fun main() {
             else -> "OpenGL ES"
           }
           println("✅ MapLibre initialized with $backendName backend")
-          
-          // Initial render to display the map
-          invalidate()
 
         } catch (e: Exception) {
           println("❌ Failed to initialize MapLibre: ${e.message}")

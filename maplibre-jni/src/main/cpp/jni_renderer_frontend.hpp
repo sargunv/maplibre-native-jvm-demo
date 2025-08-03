@@ -20,6 +20,9 @@ namespace maplibre_jni {
 // This follows the pattern from maplibre-native-rs to avoid missing header dependencies
 class RendererFrontend : public mbgl::RendererFrontend {
 public:
+    // Callback type for update notifications
+    using UpdateCallback = std::function<void()>;
+    
     // Create a frontend with the given backend and pixel ratio
     static std::unique_ptr<RendererFrontend> create(
         mbgl::gfx::RendererBackend& backend,
@@ -37,6 +40,9 @@ public:
     
     // Additional methods for rendering
     void render();
+    
+    // Set callback to be invoked when update() is called
+    void setUpdateCallback(UpdateCallback callback);
     
 protected:
     // Hide constructor to force use of factory method

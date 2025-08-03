@@ -32,6 +32,14 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_RendererFrontend_nativeDestroy
 JNIEXPORT void JNICALL Java_com_maplibre_jni_RendererFrontend_nativeRender
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     com_maplibre_jni_RendererFrontend
+ * Method:    nativeSetUpdateCallback
+ * Signature: (JLjava/lang/Runnable;)V
+ */
+JNIEXPORT void JNICALL Java_com_maplibre_jni_RendererFrontend_nativeSetUpdateCallback
+  (JNIEnv *, jclass, jlong, jobject);
+
 #ifdef __cplusplus
 }
 #endif

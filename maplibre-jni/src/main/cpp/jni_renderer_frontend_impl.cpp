@@ -39,6 +39,9 @@ public:
     
     void update(std::shared_ptr<mbgl::UpdateParameters> parameters) {
         updateParameters = parameters;
+        if (updateCallback) {
+            updateCallback();
+        }
     }
     
     void render() {
@@ -60,6 +63,10 @@ public:
         return threadPool;
     }
     
+    void setUpdateCallback(RendererFrontend::UpdateCallback callback) {
+        updateCallback = callback;
+    }
+    
 private:
     mbgl::gfx::RendererBackend& backend;
     std::unique_ptr<mbgl::Renderer> renderer;
@@ -67,6 +74,7 @@ private:
     std::shared_ptr<mbgl::UpdateParameters> updateParameters;
     std::shared_ptr<mbgl::Scheduler> scheduler;
     mbgl::TaggedScheduler threadPool;
+    RendererFrontend::UpdateCallback updateCallback;
 };
 
 std::unique_ptr<RendererFrontend> RendererFrontend::create(
@@ -114,6 +122,12 @@ const mbgl::TaggedScheduler& RendererFrontend::getThreadPool() const {
 void RendererFrontend::render() {
     if (impl) {
         impl->render();
+    }
+}
+
+void RendererFrontend::setUpdateCallback(UpdateCallback callback) {
+    if (impl) {
+        impl->setUpdateCallback(callback);
     }
 }
 
