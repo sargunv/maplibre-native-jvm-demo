@@ -1,4 +1,4 @@
-#include "jni_tileserveroptions_conversions.hpp"
+#include "tileserveroptions_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

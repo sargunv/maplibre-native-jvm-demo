@@ -1,4 +1,4 @@
-#include "jni_clientoptions_conversions.hpp"
+#include "clientoptions_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

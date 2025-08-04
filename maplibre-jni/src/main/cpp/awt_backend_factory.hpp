@@ -6,9 +6,9 @@
 #include <jni.h>
 
 #ifdef __APPLE__
-#include "jni_awt_metal_backend.hpp"
+#include "awt_metal_backend.hpp"
 #else
-#include "jni_awt_gl_backend.hpp"
+#include "awt_gl_backend.hpp"
 #endif
 
 namespace maplibre_jni {

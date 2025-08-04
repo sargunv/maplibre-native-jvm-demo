@@ -1,7 +1,7 @@
-#include "jni_cameraoptions_conversions.hpp"
-#include "jni_latlng_conversions.hpp"
-#include "jni_edgeinsets_conversions.hpp"
-#include "jni_screencoordinate_conversions.hpp"
+#include "cameraoptions_conversions.hpp"
+#include "latlng_conversions.hpp"
+#include "edgeinsets_conversions.hpp"
+#include "screencoordinate_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

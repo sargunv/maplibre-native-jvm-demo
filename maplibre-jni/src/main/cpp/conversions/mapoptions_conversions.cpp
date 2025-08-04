@@ -1,5 +1,5 @@
-#include "jni_mapoptions_conversions.hpp"
-#include "jni_size_conversions.hpp"
+#include "mapoptions_conversions.hpp"
+#include "size_conversions.hpp"
 #include <mbgl/map/mode.hpp>
 #include <stdexcept>
 

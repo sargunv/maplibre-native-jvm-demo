@@ -1,4 +1,4 @@
-#include "jni_awt_backend_factory.hpp"
+#include "awt_backend_factory.hpp"
 #include <mbgl/util/logging.hpp>
 
 namespace maplibre_jni {

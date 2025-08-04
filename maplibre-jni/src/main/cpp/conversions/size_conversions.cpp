@@ -1,4 +1,4 @@
-#include "jni_size_conversions.hpp"
+#include "size_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

@@ -1,6 +1,6 @@
 #ifdef __APPLE__
 
-#include "jni_awt_metal_backend.hpp"
+#include "awt_metal_backend.hpp"
 #include <mbgl/mtl/renderable_resource.hpp>
 #include <mbgl/mtl/mtl_fwd.hpp>
 #include <mbgl/mtl/texture2d.hpp>

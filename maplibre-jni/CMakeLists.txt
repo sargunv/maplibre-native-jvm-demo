@@ -43,32 +43,32 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native maplibre-
 # Create our JNI library
 set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/jni_helpers.hpp
-    src/main/cpp/conversions/jni_latlng_conversions.cpp
-    src/main/cpp/conversions/jni_size_conversions.cpp
-    src/main/cpp/conversions/jni_screencoordinate_conversions.cpp
-    src/main/cpp/conversions/jni_edgeinsets_conversions.cpp
-    src/main/cpp/conversions/jni_cameraoptions_conversions.cpp
-    src/main/cpp/conversions/jni_mapoptions_conversions.cpp
-    src/main/cpp/conversions/jni_clientoptions_conversions.cpp
-    src/main/cpp/conversions/jni_tileserveroptions_conversions.cpp
-    src/main/cpp/conversions/jni_resourceoptions_conversions.cpp
-    src/main/cpp/jni_map_observer.cpp
-    src/main/cpp/jni_maplibre_map.cpp
+    src/main/cpp/conversions/latlng_conversions.cpp
+    src/main/cpp/conversions/size_conversions.cpp
+    src/main/cpp/conversions/screencoordinate_conversions.cpp
+    src/main/cpp/conversions/edgeinsets_conversions.cpp
+    src/main/cpp/conversions/cameraoptions_conversions.cpp
+    src/main/cpp/conversions/mapoptions_conversions.cpp
+    src/main/cpp/conversions/clientoptions_conversions.cpp
+    src/main/cpp/conversions/tileserveroptions_conversions.cpp
+    src/main/cpp/conversions/resourceoptions_conversions.cpp
+    src/main/cpp/map_observer.cpp
+    src/main/cpp/maplibre_map.cpp
     # New unified renderer architecture
-    src/main/cpp/jni_awt_canvas_renderer.cpp
-    src/main/cpp/jni_awt_backend_factory.cpp
+    src/main/cpp/awt_canvas_renderer.cpp
+    src/main/cpp/awt_backend_factory.cpp
 )
 
 # Add platform-specific backend sources
 if(APPLE)
     # Metal backend for macOS
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/jni_awt_metal_backend.mm
+        src/main/cpp/awt_metal_backend.mm
     )
 else()
     # OpenGL ES backend for Linux/Windows (stub for now)
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/jni_awt_gl_backend.cpp
+        src/main/cpp/awt_gl_backend.cpp
     )
 endif()
 

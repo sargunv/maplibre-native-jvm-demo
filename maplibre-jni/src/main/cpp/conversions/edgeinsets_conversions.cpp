@@ -1,4 +1,4 @@
-#include "jni_edgeinsets_conversions.hpp"
+#include "edgeinsets_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

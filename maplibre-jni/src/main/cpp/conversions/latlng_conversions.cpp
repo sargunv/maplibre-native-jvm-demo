@@ -1,4 +1,4 @@
-#include "jni_latlng_conversions.hpp"
+#include "latlng_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

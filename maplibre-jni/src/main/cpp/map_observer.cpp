@@ -1,4 +1,4 @@
-#include "jni_map_observer.hpp"
+#include "map_observer.hpp"
 #include <cassert>
 #include <iostream>
 

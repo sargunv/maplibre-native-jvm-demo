@@ -1,4 +1,4 @@
-#include "jni_screencoordinate_conversions.hpp"
+#include "screencoordinate_conversions.hpp"
 #include <stdexcept>
 
 namespace maplibre_jni {

@@ -1,6 +1,6 @@
-#include "jni_awt_canvas_renderer.hpp"
+#include "awt_canvas_renderer.hpp"
 #include "jni_helpers.hpp"
-#include "jni_awt_backend_factory.hpp"
+#include "awt_backend_factory.hpp"
 
 #include <mbgl/actor/scheduler.hpp>
 #include <mbgl/gfx/backend_scope.hpp>
