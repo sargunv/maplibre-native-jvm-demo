@@ -7,20 +7,21 @@ This project creates JVM bindings for MapLibre Native using direct C++ JNI, enab
 - **MapLibre Native**: C++ map rendering engine
 - **C++ JNI Layer**: Direct JNI bindings to MapLibre types
 - **Kotlin API**: High-level API for Java/Kotlin developers with automatic memory management
-- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux/Windows (in development)
+- **Platform-specific Backends**: Metal on macOS, OpenGL/Vulkan on Linux/Windows
 
 ## Build System
 Uses CMake to build MapLibre from source with custom JNI code:
 - **MapLibre Native as Git Submodule**: At `vendor/maplibre-native`
 - **CMake Integration**: Single CMakeLists.txt builds both MapLibre and JNI code
 
-## Current Status (2025-08-04)
+## Current Status (2025-01-04)
 
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
 - ✅ **Cross-platform JAWT integration**: Unified AwtCanvasRenderer with platform-specific backends
-- ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface
+- ✅ **Native OpenGL backend on Linux**: OpenGL ES 2.0 rendering via EGL (default)
+- ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface (optional)
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
@@ -32,10 +33,10 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
-- ❌ **Windows support**: Vulkan backend needs Windows-specific surface creation
+- ❌ **Windows support**: OpenGL/Vulkan backends need Windows-specific surface creation
 
 ### Known Issues
-- **Vulkan resize flickering**: The Vulkan backend (Linux) exhibits flickering during window resize. This is due to swapchain recreation timing - the renderer continues using the old swapchain while the window has already resized. The Metal backend (macOS) does not have this issue.
+- **Linux resize flickering**: Both OpenGL and Vulkan backends on Linux exhibit flickering during window resize. This appears to be related to X11/JAWT integration rather than the specific graphics API, as both backends show the same behavior. The Metal backend (macOS) does not have this issue.
 
 ### Architecture Status
 ```
@@ -43,7 +44,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
     ↓
 ✅ JAWT (Native window handle extraction)
     ↓
-✅ Platform Backend (Metal on macOS, Vulkan on Linux)
+✅ Platform Backend (Metal on macOS, OpenGL/Vulkan on Linux)
     ↓
 ✅ RunLoop (processes async events)
     ↓
@@ -69,12 +70,12 @@ Uses CMake to build MapLibre from source with custom JNI code:
    - Style switching at runtime
 
 ### Immediate Issues to Fix
-1. **Windows support**: Add Windows surface creation for Vulkan backend
-2. **Linux/Vulkan resize flickering**: Investigate swapchain recreation timing to eliminate flicker
+1. **Windows support**: Add Windows surface creation for OpenGL/Vulkan backends
+2. **Linux resize flickering**: Investigate X11/JAWT integration to eliminate flicker on window resize
 
 #### Native Metal Integration (2025-08-03)
 - **Native Metal Backend**: Direct Metal rendering on macOS
-- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux (Windows planned)
+- **Platform-specific Backends**: Metal on macOS, OpenGL/Vulkan on Linux (Windows planned)
 - **JAWT Version 9**: Required for modern Java (version constant: 0x00090000)
 - **CALayer Configuration**: Must set frame, opaque, contentsScale, and pixelFormat properties
 - **GLFW Pattern**: Metal backend mimics GLFW implementation exactly for consistency
@@ -117,8 +118,8 @@ open class NativeObject internal constructor(
 - CMake 3.21+
 - Platform-specific:
   - **macOS**: Metal framework (included with Xcode)
-  - **Linux**: Vulkan SDK and drivers
-  - **Windows**: Vulkan SDK (not yet implemented)
+  - **Linux**: OpenGL/EGL libraries (default) or Vulkan SDK (optional)
+  - **Windows**: OpenGL/EGL or Vulkan SDK (not yet implemented)
 
 ## Project Structure
 ```
@@ -128,7 +129,8 @@ maplibre-jni/
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
     ├── awt_metal_backend.mm    # Metal backend for macOS
-    ├── awt_vulkan_backend.cpp  # Vulkan backend for Linux/Windows
+    ├── awt_opengl_backend.cpp  # OpenGL backend for Linux/Windows (default)
+    ├── awt_vulkan_backend.cpp  # Vulkan backend for Linux/Windows (optional)
     ├── awt_backend_factory.cpp # Platform backend factory
     ├── awt_canvas_renderer.cpp # Unified renderer frontend
     └── maplibre_map.cpp    # Map and observer wrappers
@@ -161,12 +163,12 @@ src/main/kotlin/Main.kt         # Demo application
 ### Decision
 Implemented native graphics backends for each platform without any translation layers:
 - **macOS**: Direct Metal backend
-- **Linux**: Vulkan backend (implemented)
-- **Windows**: Vulkan backend (surface creation not yet implemented)
+- **Linux**: OpenGL (default) and Vulkan (optional) backends
+- **Windows**: OpenGL/Vulkan backends (surface creation not yet implemented)
 
 ### Implementation Details
-- **No external graphics libraries**: No ANGLE, JOGL, or EGL dependencies
-- **Native APIs only**: Direct Metal on macOS, Vulkan on Linux/Windows (planned)
+- **No external graphics libraries**: No ANGLE or JOGL dependencies
+- **Native APIs only**: Direct Metal on macOS, OpenGL/EGL or Vulkan on Linux/Windows
 - **JAWT Integration**: Direct native window handle extraction for all platforms
 - **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
 
@@ -193,7 +195,30 @@ Successfully implemented native Metal backend by:
 - Command queue and buffers managed per GLFW pattern
 - Depth and stencil textures created with proper Metal usage flags
 
-## Vulkan Backend Implementation Notes (2025-08-04)
+## OpenGL Backend Implementation Notes (2025-01-04)
+
+### Implementation Status
+Successfully implemented native OpenGL backend for Linux:
+1. X11 window handle extraction via JAWT
+2. EGL context creation and management
+3. OpenGL ES 2.0 rendering context
+4. Integration with MapLibre's GL renderer
+5. Follows GLFW OpenGL backend patterns
+
+### Key Technical Details
+- OpenGL backend inherits from `mbgl::gl::RendererBackend` and `mbgl::gfx::Renderable`
+- OpenGLRenderableResource implements `bind()` and `swap()` for buffer management
+- EGL 1.5 for context creation and surface management
+- X11 window handle extracted from JAWT drawable
+- Immediate JAWT surface release after handle extraction (prevents AWT blocking)
+- Double buffering via `eglSwapBuffers()`
+
+### Build Configuration
+- Default backend for Linux/Windows (no flag needed)
+- Use `USE_VULKAN_BACKEND=ON` CMake flag to use Vulkan instead
+- Automatically links against OpenGL and EGL libraries
+
+## Vulkan Backend Implementation Notes (2025-01-04)
 
 ### Implementation Status
 Successfully implemented native Vulkan backend for Linux:
@@ -210,6 +235,6 @@ Successfully implemented native Vulkan backend for Linux:
 - Calls `requestSurfaceUpdate()` on resize for swapchain recreation
 
 ### Known Issues
-- **Resize flickering**: Swapchain recreation has inherent latency causing visible flicker during resize
+- **Resize flickering**: Same as OpenGL backend - appears to be X11/JAWT integration issue
 - **Windows support**: Need to add Win32 surface creation
 

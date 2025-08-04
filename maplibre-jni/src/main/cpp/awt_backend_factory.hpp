@@ -8,7 +8,12 @@
 #ifdef __APPLE__
 #include "awt_metal_backend.hpp"
 #else
+// Check if we're using Vulkan or OpenGL backend
+#ifdef USE_VULKAN_BACKEND
 #include "awt_vulkan_backend.hpp"
+#else
+#include "awt_opengl_backend.hpp"
+#endif
 #endif
 
 namespace maplibre_jni {
@@ -17,7 +22,11 @@ namespace maplibre_jni {
 #ifdef __APPLE__
     using PlatformBackend = MetalBackend;
 #else
-    using PlatformBackend = VulkanBackend;
+    #ifdef USE_VULKAN_BACKEND
+        using PlatformBackend = VulkanBackend;
+    #else
+        using PlatformBackend = OpenGLBackend;
+    #endif
 #endif
 
 // Factory function to create platform-specific backend

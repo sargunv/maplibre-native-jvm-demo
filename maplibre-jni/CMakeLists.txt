@@ -19,6 +19,14 @@ find_package(JNI REQUIRED)
 # Enable position-independent code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Backend selection option
+option(USE_VULKAN_BACKEND "Use Vulkan backend instead of OpenGL on Linux/Windows" OFF)
+
+# Error if trying to use Vulkan on macOS
+if(APPLE AND USE_VULKAN_BACKEND)
+    message(FATAL_ERROR "USE_VULKAN_BACKEND cannot be used on macOS. macOS always uses the Metal backend.")
+endif()
+
 # Configure MapLibre Native build options based on platform
 if(APPLE)
     # Use Metal backend on macOS
@@ -26,10 +34,17 @@ if(APPLE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 else()
-    # Use Vulkan backend on Linux/Windows
+    # Use OpenGL or Vulkan backend on Linux/Windows
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
+    if(USE_VULKAN_BACKEND)
+        set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
+        set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
+        message(STATUS "Using Vulkan backend for Linux/Windows")
+    else()
+        set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
+        set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
+        message(STATUS "Using OpenGL backend for Linux/Windows")
+    endif()
 endif()
 
 set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
@@ -66,10 +81,17 @@ if(APPLE)
         src/main/cpp/awt_metal_backend.mm
     )
 else()
-    # Vulkan backend for Linux/Windows
-    list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_vulkan_backend.cpp
-    )
+    if(USE_VULKAN_BACKEND)
+        # Vulkan backend for Linux/Windows
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/awt_vulkan_backend.cpp
+        )
+    else()
+        # OpenGL backend for Linux/Windows
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/awt_opengl_backend.cpp
+        )
+    endif()
 endif()
 
 add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
@@ -98,11 +120,17 @@ target_compile_options(maplibre-jni PRIVATE
     -fexceptions
 )
 
+# Pass backend selection to C++ code
+if(USE_VULKAN_BACKEND AND NOT APPLE)
+    target_compile_definitions(maplibre-jni PRIVATE USE_VULKAN_BACKEND)
+endif()
+
 # Link against MapLibre (this brings in all dependencies)
 target_link_libraries(maplibre-jni
     PRIVATE
         Mapbox::Map
         mbgl-compiler-options
+        mbgl-vendor-unique_resource
         ${JNI_LIBRARIES}
 )
 
@@ -119,27 +147,46 @@ if(APPLE)
         "-framework Metal"
     )
 else()
-    # Linux
+    # Linux/Windows
     find_library(JAWT_LIBRARY jawt HINTS ${JAVA_HOME}/lib ${JAVA_HOME}/jre/lib/amd64)
     if(JAWT_LIBRARY)
         target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
     endif()
 
-    # Find X11 for window system integration
-    find_package(X11 REQUIRED)
+    # Find X11 for window system integration (Linux)
+    if(UNIX AND NOT APPLE)
+        find_package(X11 REQUIRED)
+        target_link_libraries(maplibre-jni PRIVATE ${X11_LIBRARIES})
+        target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
+    endif()
     
-    # Find Vulkan
-    find_package(Vulkan REQUIRED)
-    
-    target_link_libraries(maplibre-jni PRIVATE 
-        ${X11_LIBRARIES}
-        Vulkan::Vulkan
-    )
-    
-    target_include_directories(maplibre-jni PRIVATE
-        ${X11_INCLUDE_DIR}
-        ${Vulkan_INCLUDE_DIRS}
-    )
+    if(USE_VULKAN_BACKEND)
+        # Find Vulkan
+        find_package(Vulkan REQUIRED)
+        
+        target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
+        target_include_directories(maplibre-jni PRIVATE ${Vulkan_INCLUDE_DIRS})
+    else()
+        # Find OpenGL and EGL
+        find_package(OpenGL REQUIRED)
+        
+        # Find EGL - required for OpenGL context creation
+        find_library(EGL_LIBRARY EGL)
+        if(NOT EGL_LIBRARY)
+            message(FATAL_ERROR "EGL library not found")
+        endif()
+        
+        target_link_libraries(maplibre-jni PRIVATE 
+            OpenGL::GL
+            OpenGL::EGL
+            ${EGL_LIBRARY}
+        )
+        
+        # Add OpenGL/EGL include directories if needed
+        if(OpenGL_INCLUDE_DIR)
+            target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+        endif()
+    endif()
 endif()
 
 # Set output directory
