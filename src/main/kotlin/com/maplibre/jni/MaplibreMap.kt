@@ -103,7 +103,7 @@ class MaplibreMap(
      * @param size The new size in pixels
      */
     fun setSize(size: Size) {
-        nativeSetSize(nativePtr, size.nativePtr)
+        nativeSetSize(nativePtr, size)
     }
     
     /**
@@ -151,7 +151,7 @@ class MaplibreMap(
         private external fun nativeGetCameraOptions(ptr: Long): Long
         
         @JvmStatic
-        private external fun nativeSetSize(ptr: Long, sizePtr: Long)
+        private external fun nativeSetSize(ptr: Long, size: Size)
         
         @JvmStatic
         private external fun nativeActivateFileSources(resourceOptionsPtr: Long, clientOptionsPtr: Long)

@@ -83,10 +83,10 @@ JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
 /*
  * Class:     com_maplibre_jni_MaplibreMap
  * Method:    nativeSetSize
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/Size;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetSize
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_MaplibreMap

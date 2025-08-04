@@ -8,17 +8,17 @@ class CameraOptions internal constructor(
 ) {
     constructor() : this(::nativeNew)
     fun withCenter(center: LatLng?): CameraOptions {
-        nativeSetCenter(nativePtr, center?.nativePtr ?: 0L)
+        nativeSetCenter(nativePtr, center)
         return this
     }
 
     fun withPadding(padding: EdgeInsets?): CameraOptions {
-        nativeSetPadding(nativePtr, padding?.nativePtr ?: 0L)
+        nativeSetPadding(nativePtr, padding)
         return this
     }
 
     fun withAnchor(anchor: ScreenCoordinate?): CameraOptions {
-        nativeSetAnchor(nativePtr, anchor?.nativePtr ?: 0L)
+        nativeSetAnchor(nativePtr, anchor)
         return this
     }
 
@@ -49,20 +49,11 @@ class CameraOptions internal constructor(
         return this
     }
 
-    val center: LatLng? get() {
-        val ptr = nativeGetCenter(nativePtr)
-        return if (ptr == 0L) null else LatLng { ptr }
-    }
+    val center: LatLng? get() = nativeGetCenter(nativePtr)
 
-    val padding: EdgeInsets? get() {
-        val ptr = nativeGetPadding(nativePtr)
-        return if (ptr == 0L) null else EdgeInsets { ptr }
-    }
+    val padding: EdgeInsets? get() = nativeGetPadding(nativePtr)
 
-    val anchor: ScreenCoordinate? get() {
-        val ptr = nativeGetAnchor(nativePtr)
-        return if (ptr == 0L) null else ScreenCoordinate { ptr }
-    }
+    val anchor: ScreenCoordinate? get() = nativeGetAnchor(nativePtr)
 
     val zoom: Double? get() = nativeGetZoomOptional(nativePtr)
 
@@ -93,15 +84,15 @@ class CameraOptions internal constructor(
 
         @JvmStatic external fun nativeNew(): Long
         @JvmStatic external fun nativeDestroy(ptr: Long)
-        @JvmStatic external fun nativeSetCenter(ptr: Long, centerPtr: Long)
-        @JvmStatic external fun nativeSetPadding(ptr: Long, paddingPtr: Long)
-        @JvmStatic external fun nativeSetAnchor(ptr: Long, anchorPtr: Long)
+        @JvmStatic external fun nativeSetCenter(ptr: Long, center: LatLng?)
+        @JvmStatic external fun nativeSetPadding(ptr: Long, padding: EdgeInsets?)
+        @JvmStatic external fun nativeSetAnchor(ptr: Long, anchor: ScreenCoordinate?)
         @JvmStatic external fun nativeSetZoomOptional(ptr: Long, zoom: Double, hasValue: Boolean)
         @JvmStatic external fun nativeSetBearingOptional(ptr: Long, bearing: Double, hasValue: Boolean)
         @JvmStatic external fun nativeSetPitchOptional(ptr: Long, pitch: Double, hasValue: Boolean)
-        @JvmStatic external fun nativeGetCenter(ptr: Long): Long
-        @JvmStatic external fun nativeGetPadding(ptr: Long): Long
-        @JvmStatic external fun nativeGetAnchor(ptr: Long): Long
+        @JvmStatic external fun nativeGetCenter(ptr: Long): LatLng?
+        @JvmStatic external fun nativeGetPadding(ptr: Long): EdgeInsets?
+        @JvmStatic external fun nativeGetAnchor(ptr: Long): ScreenCoordinate?
         @JvmStatic external fun nativeGetZoomOptional(ptr: Long): Double?
         @JvmStatic external fun nativeGetBearingOptional(ptr: Long): Double?
         @JvmStatic external fun nativeGetPitchOptional(ptr: Long): Double?

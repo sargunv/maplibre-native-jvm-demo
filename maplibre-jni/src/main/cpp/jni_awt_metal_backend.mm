@@ -29,12 +29,12 @@ public:
 
     // mbgl::gfx::RendererBackend implementation
     mbgl::gfx::Renderable& getDefaultRenderable() override;
-    
+
     // mbgl::mtl::RendererBackend implementation
     void activate() override {}
     void deactivate() override {}
     void updateAssumedState() override {}
-    
+
     // Size management
     void setSize(mbgl::Size size);
     mbgl::Size getSize() const;
@@ -42,16 +42,16 @@ public:
 private:
     void setupMetalLayer(JNIEnv* env, jobject canvas);
     void releaseNativeWindow();
-    
+
     JNIEnv* getEnv();
-    
+
     // Size
     mbgl::Size size;
-    
+
     // JAWT structures
     void* jawtDrawingSurface = nullptr;
     void* jawtDrawingSurfaceInfo = nullptr;
-    
+
     // JNI references
     JavaVM* jvm = nullptr;
     jobject canvasRef = nullptr;
@@ -181,33 +181,30 @@ MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width, int height)
     : mbgl::mtl::RendererBackend(mbgl::gfx::ContextMode::Unique),
       mbgl::gfx::Renderable(mbgl::Size{0, 0}, std::make_unique<mbgl::MetalRenderableResource>(*this)),
       size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)}) {
-    
+
     // Get JavaVM for later use
     env->GetJavaVM(&jvm);
     canvasRef = env->NewGlobalRef(canvas);
-    
+
     // Configure the Metal layer via Objective-C
     auto& resource = getResource<mbgl::MetalRenderableResource>();
     resource.setBackendSize(size);
     CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
-    
+
     // Get the backing scale factor for proper Retina display support
     NSScreen* screen = [NSScreen mainScreen];
     CGFloat scale = screen.backingScaleFactor;
-    
+
     // Set the frame accounting for the scale factor (convert from pixels to points)
     metalLayer.frame = CGRectMake(0, 0, width / scale, height / scale);
-    metalLayer.opaque = YES;
-    metalLayer.contentsScale = scale;
-    metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-    
+
     // Now set up the Metal layer on the AWT Canvas
     setupMetalLayer(env, canvas);
 }
 
 MetalBackend::~MetalBackend() {
     releaseNativeWindow();
-    
+
     if (canvasRef && jvm) {
         JNIEnv* env = getEnv();
         if (env) {
@@ -220,17 +217,6 @@ void MetalBackend::setSize(mbgl::Size newSize) {
     size = newSize;
     auto& resource = getResource<mbgl::MetalRenderableResource>();
     resource.setBackendSize(size);
-    
-    // Update the Metal layer frame via Objective-C
-    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
-    
-    // Get the backing scale factor for proper Retina display support
-    NSScreen* screen = [NSScreen mainScreen];
-    CGFloat scale = screen.backingScaleFactor;
-    
-    // Set the frame accounting for the scale factor
-    metalLayer.frame = CGRectMake(0, 0, size.width / scale, size.height / scale);
-    metalLayer.contentsScale = scale;
 }
 
 mbgl::gfx::Renderable& MetalBackend::getDefaultRenderable() {
@@ -289,7 +275,7 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
     // Get the Metal layer from our resource and set it on the JAWT surface
     auto& resource = getResource<mbgl::MetalRenderableResource>();
     CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
-    
+
     // Set the Metal layer on the JAWT surface
     surfaceLayers.layer = metalLayer;
 
@@ -327,9 +313,9 @@ JNIEnv* MetalBackend::getEnv() {
 
 // Factory function
 std::unique_ptr<mbgl::gfx::RendererBackend> createMetalBackend(
-    JNIEnv* env, 
-    jobject canvas, 
-    int width, 
+    JNIEnv* env,
+    jobject canvas,
+    int width,
     int height,
     const mbgl::gfx::ContextMode contextMode
 ) {

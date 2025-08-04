@@ -40,10 +40,10 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native maplibre-
 # Create our JNI library
 set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/jni_helpers.hpp
-    src/main/cpp/jni_size.cpp
-    src/main/cpp/jni_latlng.cpp
-    src/main/cpp/jni_edgeinsets.cpp
-    src/main/cpp/jni_screencoordinate.cpp
+    src/main/cpp/conversions/jni_latlng_conversions.cpp
+    src/main/cpp/conversions/jni_size_conversions.cpp
+    src/main/cpp/conversions/jni_screencoordinate_conversions.cpp
+    src/main/cpp/conversions/jni_edgeinsets_conversions.cpp
     src/main/cpp/jni_cameraoptions.cpp
     src/main/cpp/jni_mapoptions.cpp
     src/main/cpp/jni_resourceoptions.cpp

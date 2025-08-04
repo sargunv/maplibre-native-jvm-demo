@@ -4,6 +4,7 @@
 #include "mbgl/util/geo.hpp"
 #include "mbgl/util/size.hpp"
 #include "jni_helpers.hpp"
+#include "conversions/jni_size_conversions.hpp"
 
 extern "C" {
 
@@ -49,10 +50,10 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MapOptions_nativeSetNorthOrientatio
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MapOptions_nativeSetSize
-  (JNIEnv* env, jclass, jlong ptr, jlong sizePtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject size) {
     auto* options = fromJavaPointer<mbgl::MapOptions>(ptr);
-    auto* size = fromJavaPointer<mbgl::Size>(sizePtr);
-    options->withSize(*size);
+    mbgl::Size mbglSize = maplibre_jni::SizeConversions::extract(env, size);
+    options->withSize(mbglSize);
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MapOptions_nativeSetPixelRatio
@@ -91,10 +92,10 @@ JNIEXPORT jint JNICALL Java_com_maplibre_jni_MapOptions_nativeGetNorthOrientatio
     return static_cast<jint>(options->northOrientation());
 }
 
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MapOptions_nativeGetSize
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MapOptions_nativeGetSize
   (JNIEnv* env, jclass, jlong ptr) {
     auto* options = fromJavaPointer<mbgl::MapOptions>(ptr);
-    return toJavaPointer(new mbgl::Size(options->size()));
+    return maplibre_jni::SizeConversions::create(env, options->size());
 }
 
 JNIEXPORT jfloat JNICALL Java_com_maplibre_jni_MapOptions_nativeGetPixelRatio

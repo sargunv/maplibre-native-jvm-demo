@@ -2,6 +2,7 @@
 #include "jni_helpers.hpp"
 #include "jni_awt_canvas_renderer.hpp"
 #include "jni_map_observer.hpp"
+#include "conversions/jni_size_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -103,10 +104,10 @@ JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetSize
-  (JNIEnv* env, jclass, jlong ptr, jlong sizePtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject size) {
     auto* map = fromJavaPointer<mbgl::Map>(ptr);
-    auto* size = fromJavaPointer<mbgl::Size>(sizePtr);
-    map->setSize(*size);
+    mbgl::Size mbglSize = maplibre_jni::SizeConversions::extract(env, size);
+    map->setSize(mbglSize);
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeActivateFileSources

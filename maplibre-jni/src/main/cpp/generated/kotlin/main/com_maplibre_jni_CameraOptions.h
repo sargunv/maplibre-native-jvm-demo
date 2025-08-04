@@ -27,26 +27,26 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeDestroy
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeSetCenter
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/LatLng;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetCenter
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeSetPadding
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/EdgeInsets;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetPadding
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeSetAnchor
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/ScreenCoordinate;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetAnchor
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_CameraOptions
@@ -75,25 +75,25 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetPitchOptiona
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeGetCenter
- * Signature: (J)J
+ * Signature: (J)Lcom/maplibre/jni/LatLng;
  */
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetCenter
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetCenter
   (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeGetPadding
- * Signature: (J)J
+ * Signature: (J)Lcom/maplibre/jni/EdgeInsets;
  */
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetPadding
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetPadding
   (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     com_maplibre_jni_CameraOptions
  * Method:    nativeGetAnchor
- * Signature: (J)J
+ * Signature: (J)Lcom/maplibre/jni/ScreenCoordinate;
  */
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetAnchor
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetAnchor
   (JNIEnv *, jclass, jlong);
 
 /*

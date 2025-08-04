@@ -34,7 +34,7 @@ class MapOptions internal constructor(
     }
     
     fun withSize(size: Size): MapOptions {
-        nativeSetSize(nativePtr, size.nativePtr)
+        nativeSetSize(nativePtr, size)
         return this
     }
     
@@ -54,7 +54,7 @@ class MapOptions internal constructor(
     
     val northOrientation: NorthOrientation get() = NorthOrientation.fromNative(nativeGetNorthOrientation(nativePtr))
     
-    val size: Size get() = Size { nativeGetSize(nativePtr) }
+    val size: Size get() = nativeGetSize(nativePtr)
     
     val pixelRatio: Float get() = nativeGetPixelRatio(nativePtr)
     
@@ -99,14 +99,14 @@ class MapOptions internal constructor(
         @JvmStatic external fun nativeSetViewportMode(ptr: Long, mode: Int)
         @JvmStatic external fun nativeSetCrossSourceCollisions(ptr: Long, enabled: Boolean)
         @JvmStatic external fun nativeSetNorthOrientation(ptr: Long, orientation: Int)
-        @JvmStatic external fun nativeSetSize(ptr: Long, sizePtr: Long)
+        @JvmStatic external fun nativeSetSize(ptr: Long, size: Size)
         @JvmStatic external fun nativeSetPixelRatio(ptr: Long, ratio: Float)
         @JvmStatic external fun nativeGetMapMode(ptr: Long): Int
         @JvmStatic external fun nativeGetConstrainMode(ptr: Long): Int
         @JvmStatic external fun nativeGetViewportMode(ptr: Long): Int
         @JvmStatic external fun nativeGetCrossSourceCollisions(ptr: Long): Boolean
         @JvmStatic external fun nativeGetNorthOrientation(ptr: Long): Int
-        @JvmStatic external fun nativeGetSize(ptr: Long): Long
+        @JvmStatic external fun nativeGetSize(ptr: Long): Size
         @JvmStatic external fun nativeGetPixelRatio(ptr: Long): Float
     }
 }

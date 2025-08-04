@@ -1,6 +1,9 @@
 #include "generated/kotlin/main/com_maplibre_jni_CameraOptions.h"
 #include "mbgl/map/camera.hpp"
 #include "jni_helpers.hpp"
+#include "conversions/jni_latlng_conversions.hpp"
+#include "conversions/jni_screencoordinate_conversions.hpp"
+#include "conversions/jni_edgeinsets_conversions.hpp"
 
 extern "C" {
 
@@ -11,32 +14,32 @@ JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeNew
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetCenter
-  (JNIEnv* env, jclass, jlong ptr, jlong centerPtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject center) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
-    if (centerPtr == 0) {
+    if (center == nullptr) {
         options->center = std::nullopt;
     } else {
-        options->center = *fromJavaPointer<mbgl::LatLng>(centerPtr);
+        options->center = maplibre_jni::LatLngConversions::extract(env, center);
     }
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetPadding
-  (JNIEnv* env, jclass, jlong ptr, jlong paddingPtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject padding) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
-    if (paddingPtr == 0) {
+    if (padding == nullptr) {
         options->padding = std::nullopt;
     } else {
-        options->padding = *fromJavaPointer<mbgl::EdgeInsets>(paddingPtr);
+        options->padding = maplibre_jni::EdgeInsetsConversions::extract(env, padding);
     }
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_CameraOptions_nativeSetAnchor
-  (JNIEnv* env, jclass, jlong ptr, jlong anchorPtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject anchor) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
-    if (anchorPtr == 0) {
+    if (anchor == nullptr) {
         options->anchor = std::nullopt;
     } else {
-        options->anchor = *fromJavaPointer<mbgl::ScreenCoordinate>(anchorPtr);
+        options->anchor = maplibre_jni::ScreenCoordinateConversions::extract(env, anchor);
     }
 }
 
@@ -77,31 +80,31 @@ JNIEXPORT jboolean JNICALL Java_com_maplibre_jni_CameraOptions_nativeEquals
     return *options == *other;
 }
 
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetCenter
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetCenter
   (JNIEnv* env, jclass, jlong ptr) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
     if (options->center.has_value()) {
-        return toJavaPointer(new mbgl::LatLng(options->center.value()));
+        return maplibre_jni::LatLngConversions::create(env, options->center.value());
     }
-    return 0;
+    return nullptr;
 }
 
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetPadding
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetPadding
   (JNIEnv* env, jclass, jlong ptr) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
     if (options->padding.has_value()) {
-        return toJavaPointer(new mbgl::EdgeInsets(options->padding.value()));
+        return maplibre_jni::EdgeInsetsConversions::create(env, options->padding.value());
     }
-    return 0;
+    return nullptr;
 }
 
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetAnchor
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetAnchor
   (JNIEnv* env, jclass, jlong ptr) {
     auto* options = fromJavaPointer<mbgl::CameraOptions>(ptr);
     if (options->anchor.has_value()) {
-        return toJavaPointer(new mbgl::ScreenCoordinate(options->anchor.value()));
+        return maplibre_jni::ScreenCoordinateConversions::create(env, options->anchor.value());
     }
-    return 0;
+    return nullptr;
 }
 
 JNIEXPORT jobject JNICALL Java_com_maplibre_jni_CameraOptions_nativeGetZoomOptional

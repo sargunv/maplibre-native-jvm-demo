@@ -67,10 +67,10 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MapOptions_nativeSetNorthOrientatio
 /*
  * Class:     com_maplibre_jni_MapOptions
  * Method:    nativeSetSize
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/Size;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MapOptions_nativeSetSize
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_MapOptions
@@ -123,9 +123,9 @@ JNIEXPORT jint JNICALL Java_com_maplibre_jni_MapOptions_nativeGetNorthOrientatio
 /*
  * Class:     com_maplibre_jni_MapOptions
  * Method:    nativeGetSize
- * Signature: (J)J
+ * Signature: (J)Lcom/maplibre/jni/Size;
  */
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MapOptions_nativeGetSize
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MapOptions_nativeGetSize
   (JNIEnv *, jclass, jlong);
 
 /*
