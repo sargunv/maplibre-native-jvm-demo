@@ -7,50 +7,47 @@
 #include <mbgl/util/size.hpp>
 #include <jni.h>
 
-namespace maplibre_jni {
+namespace maplibre_jni
+{
 
-class VulkanBackend final : public mbgl::vulkan::RendererBackend,
-                           public mbgl::vulkan::Renderable {
-public:
-    VulkanBackend(JNIEnv* env, jobject canvas, int width, int height);
-    ~VulkanBackend() override;
+    class VulkanBackend final : public mbgl::vulkan::RendererBackend,
+                                public mbgl::vulkan::Renderable
+    {
+    public:
+        VulkanBackend(JNIEnv *env, jobject canvas, int width, int height);
+        ~VulkanBackend() override;
 
-    // mbgl::gfx::RendererBackend implementation
-    mbgl::gfx::Renderable& getDefaultRenderable() override;
-    
-    // Size management
-    void setSize(mbgl::Size size);
-    
-    // Platform-specific getters for surface creation
-    void* getX11Display() const { return x11Display; }
-    unsigned long getX11Window() const { return x11Window; }
+        // mbgl::gfx::RendererBackend implementation
+        mbgl::gfx::Renderable &getDefaultRenderable() override;
 
-protected:
-    // mbgl::vulkan::RendererBackend overrides
-    void activate() override {}
-    void deactivate() override {}
-    std::vector<const char*> getInstanceExtensions() override;
+        // Size management
+        void setSize(mbgl::Size size);
 
-private:
-    // JAWT window handle extraction
-    void setupVulkanSurface(JNIEnv* env, jobject canvas);
-    void releaseNativeWindow();
-    JNIEnv* getEnv();
-    
-    mbgl::Size size;
-    
-    // JAWT structures
-    void* jawtDrawingSurface = nullptr;
-    void* jawtDrawingSurfaceInfo = nullptr;
-    
-    // X11 window handles
-    void* x11Display = nullptr;
-    unsigned long x11Window = 0;
-    
-    // JNI references
-    JavaVM* javaVM = nullptr;
-    jobject canvasRef = nullptr;
-};
+        // Platform-specific getters for surface creation
+        void *getX11Display() const { return x11Display; }
+        unsigned long getX11Window() const { return x11Window; }
+
+    protected:
+        // mbgl::vulkan::RendererBackend overrides
+        void activate() override {}
+        void deactivate() override {}
+        std::vector<const char *> getInstanceExtensions() override;
+
+    private:
+        // JAWT window handle extraction
+        void setupVulkanSurface(JNIEnv *env, jobject canvas);
+        JNIEnv *getEnv();
+
+        mbgl::Size size;
+
+        // X11 window handles
+        void *x11Display = nullptr;
+        unsigned long x11Window = 0;
+
+        // JNI references
+        JavaVM *javaVM = nullptr;
+        jobject canvasRef = nullptr;
+    };
 
 } // namespace maplibre_jni
 

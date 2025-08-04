@@ -16,7 +16,7 @@
 
 // VulkanRenderableResource must be in global namespace to match GLFW pattern
 class VulkanRenderableResource final : public mbgl::vulkan::SurfaceRenderableResource
-    {
+{
 public:
     explicit VulkanRenderableResource(maplibre_jni::VulkanBackend &backend_)
         : mbgl::vulkan::SurfaceRenderableResource(backend_),
@@ -84,26 +84,14 @@ namespace maplibre_jni
               std::make_unique<VulkanRenderableResource>(*this)),
           size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)})
     {
-        // Store Java VM reference for later use
         env->GetJavaVM(&javaVM);
-
-        // Create global reference to canvas
         canvasRef = env->NewGlobalRef(canvas);
-
-        // Extract native window handles from JAWT
         setupVulkanSurface(env, canvas);
-
-        mbgl::Log::Info(mbgl::Event::General, "Starting Vulkan initialization");
-        
-        // Initialize Vulkan
         init();
-        
-        mbgl::Log::Info(mbgl::Event::General, "Vulkan initialization complete");
     }
 
     VulkanBackend::~VulkanBackend()
     {
-        // Release canvas reference
         if (canvasRef)
         {
             JNIEnv *env = getEnv();
@@ -122,12 +110,15 @@ namespace maplibre_jni
 
     void VulkanBackend::setSize(mbgl::Size newSize)
     {
+        // Update both our local size and the Renderable's size
         size = newSize;
-    }
-
-    void VulkanBackend::releaseNativeWindow()
-    {
-        // No longer needed - we release the JAWT surface immediately after getting the window handles
+        this->mbgl::vulkan::Renderable::size = newSize;
+        
+        if (context)
+        {
+            auto &contextImpl = static_cast<mbgl::vulkan::Context &>(*context);
+            contextImpl.requestSurfaceUpdate();
+        }
     }
 
     JNIEnv *VulkanBackend::getEnv()
@@ -146,7 +137,7 @@ namespace maplibre_jni
 
         // Add surface extensions
         extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-        
+
 #ifdef __linux__
         // Add X11 surface extension
         extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
@@ -223,10 +214,6 @@ namespace maplibre_jni
         ds->FreeDrawingSurfaceInfo(dsi);
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
-        
-        // Don't store references - we've already released them
-        jawtDrawingSurface = nullptr;
-        jawtDrawingSurfaceInfo = nullptr;
     }
 
 } // namespace maplibre_jni

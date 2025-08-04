@@ -27,7 +27,7 @@ fun main() {
         name = "MapLibreJNIDemo",
         version = "0.0.0",
       ),
-      frameRate = 60,
+      frameRate = 120,
       onMapReady = { map, canvas ->
         map.loadStyleURL("https://tiles.openfreemap.org/styles/bright")
         map.flyTo(
@@ -51,7 +51,6 @@ fun main() {
       setSize(800, 600)
       setLocationRelativeTo(null)
       
-      // Add a window listener to force exit
       addWindowListener(object : WindowAdapter() {
         override fun windowClosing(e: WindowEvent) {
           this@apply.dispose()
