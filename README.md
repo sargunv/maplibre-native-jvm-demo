@@ -1,20 +1,18 @@
-# maplibre-native-jvm-demo
+# kotlin-maplibre-native
 
-This project demos the integration of MapLibre Native with a Kotlin JVM application using JNI. It provides a cross-platform setup to render maps using native graphics APIs (Metal on macOS, GL/Vulkan on Linux/Windows - in development).
+MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends (Metal on macOS, Vulkan on Linux).
 
-Be aware that the code is rough and not production-ready. It is intended for educational purposes to demonstrate how to set up MapLibre Native in a JAWT window.
+### Platform Support
+- ✅ **macOS**: Native Metal backend (fully functional)
+- ✅ **Linux**: Native Vulkan backend (functional with resize flickering issue)
+- ❌ **Windows**: Vulkan backend planned (not yet implemented)
 
-### What works now
-- Complete rendering pipeline: Map → Frontend → Backend → Native API → Display
-- Network resource loading: Remote styles and tiles load successfully
-- MapLibre initialization: All components initialize successfully
-- Native Metal rendering on macOS
-- Map observer callbacks: All events fire correctly (style loaded, map loaded, etc.)
-- Repaint as needed: The map repaints when dirty
-- User interaction: Mouse/keyboard controls for pan/zoom/rotate
+### What Works
+- Complete rendering pipeline with MapLibre Native integration
+- Network resource loading (remote styles and tiles)
+- Map observer callbacks and event handling
+- User interaction (pan, zoom, rotate via mouse/keyboard)
 
-### What isn't yet implemented
-- Linux/Windows support: Vulkan or GL backend is stubbed but not yet implemented
-- Runtime styling: Cannot modify or change styles at runtime
-- Offline maps: No support for offline tiles or caching yet
-- Error handling: No robust error handling or logging implemented
+### What Doesn't Work Yet
+- Runtime styling (cannot modify styles after initialization)
+- Offline maps (no tile caching support)

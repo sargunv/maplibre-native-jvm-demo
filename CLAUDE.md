@@ -14,12 +14,13 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - **MapLibre Native as Git Submodule**: At `vendor/maplibre-native`
 - **CMake Integration**: Single CMakeLists.txt builds both MapLibre and JNI code
 
-## Current Status (2025-08-03)
+## Current Status (2025-08-04)
 
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
-- ✅ **Cross-platform JAWT integration**: Unified JAWTRendererBackend with platform-specific implementations
+- ✅ **Cross-platform JAWT integration**: Unified AwtCanvasRenderer with platform-specific backends
+- ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
@@ -31,7 +32,10 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
-- ❌ **Linux/Windows support**: Vulkan backend is stubbed but not yet implemented
+- ❌ **Windows support**: Vulkan backend needs Windows-specific surface creation
+
+### Known Issues
+- **Vulkan resize flickering**: The Vulkan backend (Linux) exhibits flickering during window resize. This is due to swapchain recreation timing - the renderer continues using the old swapchain while the window has already resized. The Metal backend (macOS) does not have this issue.
 
 ### Architecture Status
 ```
@@ -39,11 +43,11 @@ Uses CMake to build MapLibre from source with custom JNI code:
     ↓
 ✅ JAWT (Native window handle extraction)
     ↓
-✅ Platform Backend (Metal on macOS, EGL/OpenGL ES on Linux)
+✅ Platform Backend (Metal on macOS, Vulkan on Linux)
     ↓
 ✅ RunLoop (processes async events)
     ↓
-✅ JAWTRendererBackend (C++, ContextMode::Unique)
+✅ AwtCanvasRenderer (C++, unified frontend)
     ↓
 ✅ RendererFrontend (C++)
     ↓
@@ -65,11 +69,12 @@ Uses CMake to build MapLibre from source with custom JNI code:
    - Style switching at runtime
 
 ### Immediate Issues to Fix
-1. **Linux/Windows support**: Implement Vulkan backend for cross-platform support
+1. **Windows support**: Add Windows surface creation for Vulkan backend
+2. **Linux/Vulkan resize flickering**: Investigate swapchain recreation timing to eliminate flicker
 
 #### Native Metal Integration (2025-08-03)
 - **Native Metal Backend**: Direct Metal rendering on macOS
-- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux/Windows (planned)
+- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux (Windows planned)
 - **JAWT Version 9**: Required for modern Java (version constant: 0x00090000)
 - **CALayer Configuration**: Must set frame, opaque, contentsScale, and pixelFormat properties
 - **GLFW Pattern**: Metal backend mimics GLFW implementation exactly for consistency
@@ -112,7 +117,8 @@ open class NativeObject internal constructor(
 - CMake 3.21+
 - Platform-specific:
   - **macOS**: Metal framework (included with Xcode)
-  - **Linux**: Vulkan TODO
+  - **Linux**: Vulkan SDK and drivers
+  - **Windows**: Vulkan SDK (not yet implemented)
 
 ## Project Structure
 ```
@@ -121,8 +127,10 @@ maplibre-jni/
 ├── build.gradle.kts            # Gradle with CMake integration
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
-    ├── metal_backend.mm    # Metal backend for macOS
-    ├── gl_backend.cpp      # OpenGL ES backend for Linux
+    ├── awt_metal_backend.mm    # Metal backend for macOS
+    ├── awt_vulkan_backend.cpp  # Vulkan backend for Linux/Windows
+    ├── awt_backend_factory.cpp # Platform backend factory
+    ├── awt_canvas_renderer.cpp # Unified renderer frontend
     └── maplibre_map.cpp    # Map and observer wrappers
 
 src/main/kotlin/
@@ -130,7 +138,7 @@ src/main/kotlin/
     ├── NativeObject.kt         # Base class with automatic cleanup
     ├── *Types.kt               # MapLibre type wrappers
     ├── MapObserver.kt          # Event callbacks
-    ├── JAWTRendererBackend.kt  # Platform-agnostic backend wrapper
+    ├── MaplibreCanvas.kt       # High-level canvas component
     └── MaplibreMap.kt          # Main map API
 
 src/main/kotlin/Main.kt         # Demo application
@@ -153,7 +161,8 @@ src/main/kotlin/Main.kt         # Demo application
 ### Decision
 Implemented native graphics backends for each platform without any translation layers:
 - **macOS**: Direct Metal backend
-- **Linux/Windows**: Vulkan backend (stub)
+- **Linux**: Vulkan backend (implemented)
+- **Windows**: Vulkan backend (surface creation not yet implemented)
 
 ### Implementation Details
 - **No external graphics libraries**: No ANGLE, JOGL, or EGL dependencies
@@ -183,4 +192,24 @@ Successfully implemented native Metal backend by:
 - CAMetalLayer created and assigned to JAWT surface layers
 - Command queue and buffers managed per GLFW pattern
 - Depth and stencil textures created with proper Metal usage flags
+
+## Vulkan Backend Implementation Notes (2025-08-04)
+
+### Implementation Status
+Successfully implemented native Vulkan backend for Linux:
+1. X11 surface creation via JAWT
+2. Proper swapchain management
+3. Integration with MapLibre's Vulkan renderer
+4. Follows GLFW Vulkan backend patterns
+
+### Key Technical Details
+- Vulkan backend inherits from `mbgl::vulkan::RendererBackend` and `mbgl::vulkan::Renderable`
+- VulkanRenderableResource in global namespace (matching GLFW pattern)
+- X11 surface created from JAWT drawable
+- Immediate JAWT surface release after handle extraction (prevents AWT blocking)
+- Calls `requestSurfaceUpdate()` on resize for swapchain recreation
+
+### Known Issues
+- **Resize flickering**: Swapchain recreation has inherent latency causing visible flicker during resize
+- **Windows support**: Need to add Win32 surface creation
 
