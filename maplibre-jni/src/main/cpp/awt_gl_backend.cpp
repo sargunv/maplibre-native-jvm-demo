@@ -1,64 +1,63 @@
 #ifndef __APPLE__
 
 #include "awt_gl_backend.hpp"
-#include <mbgl/gl/context.hpp>
+#include <mbgl/gl/renderable_resource.hpp>
 #include <mbgl/util/logging.hpp>
-#include <memory>
-#include <jni.h>
-#include <jawt.h>
-#include <jawt_md.h>
 
-namespace maplibre_jni {
+namespace maplibre_jni
+{
 
-// OpenGL ES backend implementation
-GLBackend::GLBackend(JNIEnv* env, jobject canvas, int width, int height)
-    : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique),
-      size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)}) {
-    
-    // TODO: Implement EGL context creation and JAWT surface binding
-    mbgl::Log::Warning(mbgl::Event::OpenGL, 
-        "OpenGL ES backend not yet fully implemented for Linux/Windows. "
-        "This is a placeholder for future support.");
-}
+    class GLRenderableResource final : public mbgl::gl::RenderableResource
+    {
+    public:
+        explicit GLRenderableResource(GLBackend &backend_) : backend(backend_) {}
 
-// mbgl::gfx::RendererBackend implementation
-mbgl::gfx::Renderable& GLBackend::getDefaultRenderable() { 
-    return *this; 
-}
+        void bind() override {}
+        void swap() override {}
 
-// mbgl::gl::RendererBackend implementation  
-void GLBackend::activate() {}
+    private:
+        GLBackend &backend;
+    };
 
-void GLBackend::deactivate() {}
+    GLBackend::GLBackend(JNIEnv *env, jobject canvas, int width, int height)
+        : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique),
+          mbgl::gfx::Renderable(
+              mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
+              std::make_unique<GLRenderableResource>(*this)),
+          size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)})
+    {
 
-void GLBackend::updateAssumedState() {
-    // Reset GL state assumptions
-    getContext<mbgl::gl::Context>().resetState();
-}
+        mbgl::Log::Warning(mbgl::Event::OpenGL,
+                           "OpenGL backend stub for Linux/Windows - not yet implemented");
+    }
 
-// mbgl::gfx::Renderable implementation
-void GLBackend::setSize(mbgl::Size newSize) {
-    size = newSize;
-}
+    mbgl::gfx::Renderable &GLBackend::getDefaultRenderable()
+    {
+        return *this;
+    }
 
-mbgl::Size GLBackend::getSize() const {
-    return size;
-}
+    void GLBackend::activate()
+    {
+    }
 
-void GLBackend::swap() {
-    // TODO: Implement buffer swap via EGL
-}
+    void GLBackend::deactivate()
+    {
+    }
 
-// Factory function
-std::unique_ptr<mbgl::gfx::RendererBackend> createGLBackend(
-    JNIEnv* env, 
-    jobject canvas, 
-    int width, 
-    int height,
-    const mbgl::gfx::ContextMode contextMode
-) {
-    return std::make_unique<GLBackend>(env, canvas, width, height);
-}
+    void GLBackend::updateAssumedState()
+    {
+        // Stub - no GL context to reset
+    }
+
+    mbgl::gl::ProcAddress GLBackend::getExtensionFunctionPointer(const char *)
+    {
+        return nullptr;
+    }
+
+    void GLBackend::setSize(mbgl::Size newSize)
+    {
+        size = newSize;
+    }
 
 } // namespace maplibre_jni
 

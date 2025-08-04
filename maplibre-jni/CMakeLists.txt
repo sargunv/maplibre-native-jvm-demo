@@ -26,10 +26,10 @@ if(APPLE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 else()
-    # Use Vulkan backend on Linux/Windows
+    # Use OpenGL ES backend on Linux/Windows
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
+    set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
+    set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 endif()
 
 set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
@@ -124,12 +124,23 @@ else()
     if(JAWT_LIBRARY)
         target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
     endif()
-endif()
 
-# Platform-specific graphics library linking
-if(NOT APPLE)
-    # Linux/Windows: Vulkan support (MapLibre Native will handle Vulkan linking)
-    # No additional linking needed here as Vulkan is handled by MapLibre Native
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(EGL REQUIRED egl)
+    pkg_check_modules(GLES REQUIRED glesv2)
+    find_package(X11 REQUIRED)
+    
+    target_link_libraries(maplibre-jni PRIVATE 
+        ${EGL_LIBRARIES}
+        ${GLES_LIBRARIES}
+        ${X11_LIBRARIES}
+    )
+    
+    target_include_directories(maplibre-jni PRIVATE
+        ${EGL_INCLUDE_DIRS}
+        ${GLES_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIR}
+    )
 endif()
 
 # Set output directory
