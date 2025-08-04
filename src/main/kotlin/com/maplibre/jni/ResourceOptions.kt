@@ -1,93 +1,49 @@
 package com.maplibre.jni
 
-class ResourceOptions internal constructor(
-    private val createNative: () -> Long = { nativeDefault() }
-) : NativeObject(
-    new = createNative,
-    destroy = ::nativeDestroy
+/**
+ * Configuration options for resource loading and caching.
+ * This controls how MapLibre fetches and caches map resources.
+ */
+data class ResourceOptions(
+    val apiKey: String = "",
+    val tileServerOptions: TileServerOptions = TileServerOptions.default(),
+    val cachePath: String = "",
+    val assetPath: String = "",
+    val maximumCacheSize: Long = 50 * 1024 * 1024 // 50 MB default
 ) {
-    constructor() : this({ nativeDefault() })
-    
-    fun withApiKey(apiKey: String): ResourceOptions {
-        nativeSetApiKey(nativePtr, apiKey)
-        return this
+    init {
+        require(maximumCacheSize >= 0) { "maximumCacheSize must be non-negative" }
     }
     
-    // TODO: Implement withTileServerOptions - requires TileServerOptions wrapper
-    // For now, users can rely on the default tile server configuration
+    /**
+     * Creates a copy with a different API key.
+     */
+    fun withApiKey(apiKey: String) = copy(apiKey = apiKey)
     
-    fun withCachePath(path: String): ResourceOptions {
-        nativeSetCachePath(nativePtr, path)
-        return this
-    }
+    /**
+     * Creates a copy with different tile server options.
+     */
+    fun withTileServerOptions(options: TileServerOptions) = copy(tileServerOptions = options)
     
-    fun withAssetPath(path: String): ResourceOptions {
-        nativeSetAssetPath(nativePtr, path)
-        return this
-    }
+    /**
+     * Creates a copy with a different cache path.
+     */
+    fun withCachePath(path: String) = copy(cachePath = path)
     
-    fun withMaximumCacheSize(sizeInBytes: Long): ResourceOptions {
-        require(sizeInBytes >= 0) { "maximumCacheSize must be non-negative" }
-        nativeSetMaximumCacheSize(nativePtr, sizeInBytes)
-        return this
-    }
+    /**
+     * Creates a copy with a different asset path.
+     */
+    fun withAssetPath(path: String) = copy(assetPath = path)
     
-    // TODO: Implement withPlatformContext - requires platform-specific handling
-    // This is rarely needed and platform-dependent
+    /**
+     * Creates a copy with a different maximum cache size.
+     */
+    fun withMaximumCacheSize(sizeInBytes: Long) = copy(maximumCacheSize = sizeInBytes)
     
-    val apiKey: String get() = nativeGetApiKey(nativePtr)
-    
-    // TODO: Implement tileServerOptions getter - requires TileServerOptions wrapper
-    
-    val cachePath: String get() = nativeGetCachePath(nativePtr)
-    
-    val assetPath: String get() = nativeGetAssetPath(nativePtr)
-    
-    val maximumCacheSize: Long get() = nativeGetMaximumCacheSize(nativePtr)
-    
-    // TODO: Implement platformContext getter - platform-specific
-    
-    fun clone(): ResourceOptions {
-        return ResourceOptions { nativeClone(nativePtr) }
-    }
-    
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is ResourceOptions) return false
-        // Compare the fields we can access
-        return apiKey == other.apiKey &&
-               cachePath == other.cachePath &&
-               assetPath == other.assetPath &&
-               maximumCacheSize == other.maximumCacheSize
-    }
-    
-    override fun hashCode(): Int {
-        var result = apiKey.hashCode()
-        result = 31 * result + cachePath.hashCode()
-        result = 31 * result + assetPath.hashCode()
-        result = 31 * result + maximumCacheSize.hashCode()
-        return result
-    }
-    
-    override fun toString(): String {
-        return "ResourceOptions(apiKey='$apiKey', cachePath='$cachePath', assetPath='$assetPath', maximumCacheSize=$maximumCacheSize)"
-    }
-    
-    private companion object {
-        init {
-            MapLibreNativeLoader.load()
-        }
-        
-        @JvmStatic external fun nativeDefault(): Long
-        @JvmStatic external fun nativeDestroy(ptr: Long)
-        @JvmStatic external fun nativeClone(ptr: Long): Long
-        @JvmStatic external fun nativeSetApiKey(ptr: Long, apiKey: String)
-        @JvmStatic external fun nativeSetCachePath(ptr: Long, path: String)
-        @JvmStatic external fun nativeSetAssetPath(ptr: Long, path: String)
-        @JvmStatic external fun nativeSetMaximumCacheSize(ptr: Long, size: Long)
-        @JvmStatic external fun nativeGetApiKey(ptr: Long): String
-        @JvmStatic external fun nativeGetCachePath(ptr: Long): String
-        @JvmStatic external fun nativeGetAssetPath(ptr: Long): String
-        @JvmStatic external fun nativeGetMaximumCacheSize(ptr: Long): Long
+    companion object {
+        /**
+         * Default resource options with MapLibre demo tiles configuration.
+         */
+        fun default() = ResourceOptions()
     }
 }

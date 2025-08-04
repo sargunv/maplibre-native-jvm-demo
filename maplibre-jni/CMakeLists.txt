@@ -50,7 +50,8 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/conversions/jni_cameraoptions_conversions.cpp
     src/main/cpp/conversions/jni_mapoptions_conversions.cpp
     src/main/cpp/conversions/jni_clientoptions_conversions.cpp
-    src/main/cpp/jni_resourceoptions.cpp
+    src/main/cpp/conversions/jni_tileserveroptions_conversions.cpp
+    src/main/cpp/conversions/jni_resourceoptions_conversions.cpp
     src/main/cpp/jni_map_observer.cpp
     src/main/cpp/jni_native_map_observer.cpp
     src/main/cpp/jni_maplibre_map.cpp

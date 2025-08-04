@@ -23,7 +23,7 @@ class MaplibreMap(
         renderer.getRendererFrontend(),
         nativeObserver.nativePtr,
         mapOptions,
-        resourceOptions.nativePtr,
+        resourceOptions,
         clientOptions
     )
     
@@ -110,7 +110,7 @@ class MaplibreMap(
      * This must be called before loading remote styles to enable network requests.
      */
     fun activateFileSources() {
-        nativeActivateFileSources(storedResourceOptions.nativePtr, storedClientOptions)
+        nativeActivateFileSources(storedResourceOptions, storedClientOptions)
     }
     
     companion object {
@@ -121,7 +121,7 @@ class MaplibreMap(
             rendererFrontendPtr: Long,
             mapObserverPtr: Long,
             mapOptions: MapOptions,
-            resourceOptionsPtr: Long,
+            resourceOptions: ResourceOptions,
             clientOptions: ClientOptions
         ): Long
         
@@ -153,6 +153,6 @@ class MaplibreMap(
         private external fun nativeSetSize(ptr: Long, size: Size)
         
         @JvmStatic
-        private external fun nativeActivateFileSources(resourceOptionsPtr: Long, clientOptions: ClientOptions)
+        private external fun nativeActivateFileSources(resourceOptions: ResourceOptions, clientOptions: ClientOptions)
     }
 }
