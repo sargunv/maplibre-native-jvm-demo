@@ -1,7 +1,10 @@
 import com.maplibre.jni.*
 import java.awt.BorderLayout
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
+import kotlin.system.exitProcess
 
 fun main() {
   SwingUtilities.invokeLater {
@@ -41,14 +44,32 @@ fun main() {
       }
     )
 
-    JFrame("MapLibre Native JVM Demo").apply {
-      isVisible = true
+    val frame = JFrame("MapLibre Native JVM Demo").apply {
+      // Try using EXIT_ON_CLOSE directly first
       defaultCloseOperation = JFrame.EXIT_ON_CLOSE
       layout = BorderLayout()
       add(canvas, BorderLayout.CENTER)
       setSize(800, 600)
       setLocationRelativeTo(null)
+      
+      // Add a window listener to force exit
+      addWindowListener(object : WindowAdapter() {
+        override fun windowClosing(e: WindowEvent) {
+          println("Window closing event triggered")
+          canvas.dispose()
+          // Force exit since the window isn't closing properly
+          System.exit(0)
+        }
+      })
+      
+      isVisible = true
     }
+    
+    // Also handle Ctrl+C / SIGINT
+    Runtime.getRuntime().addShutdownHook(Thread {
+      canvas.dispose()
+      frame.dispose()
+    })
   }
 }
 

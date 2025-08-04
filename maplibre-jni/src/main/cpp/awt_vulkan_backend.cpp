@@ -103,9 +103,6 @@ namespace maplibre_jni
 
     VulkanBackend::~VulkanBackend()
     {
-        // Clean up JAWT resources
-        releaseNativeWindow();
-
         // Release canvas reference
         if (canvasRef)
         {
@@ -130,24 +127,7 @@ namespace maplibre_jni
 
     void VulkanBackend::releaseNativeWindow()
     {
-        if (jawtDrawingSurfaceInfo && jawtDrawingSurface)
-        {
-            JAWT_DrawingSurface *ds = (JAWT_DrawingSurface *)jawtDrawingSurface;
-            ds->FreeDrawingSurfaceInfo((JAWT_DrawingSurfaceInfo *)jawtDrawingSurfaceInfo);
-            ds->Unlock(ds);
-
-            // Get JAWT to free the surface
-            JAWT awt;
-            awt.version = JAWT_VERSION_9;
-            JNIEnv *env = getEnv();
-            if (env && JAWT_GetAWT(env, &awt) != JNI_FALSE)
-            {
-                awt.FreeDrawingSurface(ds);
-            }
-
-            jawtDrawingSurface = nullptr;
-            jawtDrawingSurfaceInfo = nullptr;
-        }
+        // No longer needed - we release the JAWT surface immediately after getting the window handles
     }
 
     JNIEnv *VulkanBackend::getEnv()
@@ -238,9 +218,15 @@ namespace maplibre_jni
                         "JAWT X11 surface extracted successfully");
 #endif
 
-        // Store references for cleanup
-        jawtDrawingSurface = ds;
-        jawtDrawingSurfaceInfo = dsi;
+        // We must unlock the surface immediately after getting the handles
+        // Otherwise AWT event processing will be blocked
+        ds->FreeDrawingSurfaceInfo(dsi);
+        ds->Unlock(ds);
+        awt.FreeDrawingSurface(ds);
+        
+        // Don't store references - we've already released them
+        jawtDrawingSurface = nullptr;
+        jawtDrawingSurfaceInfo = nullptr;
     }
 
 } // namespace maplibre_jni

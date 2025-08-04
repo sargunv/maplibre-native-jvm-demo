@@ -72,10 +72,15 @@ class MaplibreCanvas(
     }
   }
 
-  override fun removeNotify() {
-    super.removeNotify()
+  fun dispose() {
     renderTimer?.stop()
     renderTimer = null
+    // MaplibreMap will be cleaned up by its Cleaner when GC'd
     map = null
+  }
+
+  override fun removeNotify() {
+    super.removeNotify()
+    dispose()
   }
 }
