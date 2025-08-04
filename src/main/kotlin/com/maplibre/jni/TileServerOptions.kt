@@ -9,60 +9,49 @@ data class TileServerOptions(
     val uriSchemeAlias: String = "mapbox://",
     val apiKeyParameterName: String = "access_token",
     val requiresApiKey: Boolean = false,
-    
+
     // Source templates
     val sourceTemplate: String = "https://api.mapbox.com",
     val sourceDomainName: String = "",
     val sourceVersionPrefix: String? = null,
-    
+
     // Style templates
     val styleTemplate: String = "/styles/v1/{user}/{style}",
     val styleDomainName: String = "",
     val styleVersionPrefix: String? = null,
-    
+
     // Sprites templates
     val spritesTemplate: String = "/styles/v1/{user}/{style}/sprite",
     val spritesDomainName: String = "",
     val spritesVersionPrefix: String? = null,
-    
+
     // Glyphs templates
     val glyphsTemplate: String = "/fonts/v1/{user}/{fontstack}/{range}.pbf",
     val glyphsDomainName: String = "",
     val glyphsVersionPrefix: String? = null,
-    
+
     // Tile templates
     val tileTemplate: String = "/v4/{tileset}/{z}/{x}/{y}{ratio}.{format}",
     val tileDomainName: String = "",
     val tileVersionPrefix: String? = null,
-    
+
     // Default style
     val defaultStyle: String = ""
 ) {
     companion object {
-        /**
-         * Default configuration (usually MapLibre demo tiles)
-         */
-        fun default() = TileServerOptions(
-            baseURL = "https://demotiles.maplibre.org",
-            uriSchemeAlias = "maplibre://",
-            apiKeyParameterName = "",
-            requiresApiKey = false,
-            sourceTemplate = "https://demotiles.maplibre.org",
-            styleTemplate = "/style.json",
-            spritesTemplate = "/sprite",
-            glyphsTemplate = "/fonts/{fontstack}/{range}.pbf",
-            tileTemplate = "/tiles/{z}/{x}/{y}.pbf"
+      val DemoTiles =  TileServerOptions(
+          baseURL = "https://demotiles.maplibre.org",
+          uriSchemeAlias = "maplibre://",
+          apiKeyParameterName = "",
+          requiresApiKey = false,
+          sourceTemplate = "https://demotiles.maplibre.org",
+          styleTemplate = "/style.json",
+          spritesTemplate = "/sprite",
+          glyphsTemplate = "/fonts/{fontstack}/{range}.pbf",
+          tileTemplate = "/tiles/{z}/{x}/{y}.pbf"
         )
-        
-        /**
-         * Configuration for MapLibre demo tiles
-         */
-        fun mapLibre() = default()
-        
-        /**
-         * Configuration for Mapbox
-         */
-        fun mapbox() = TileServerOptions(
+
+        val Mapbox = TileServerOptions(
             baseURL = "https://api.mapbox.com",
             uriSchemeAlias = "mapbox://",
             apiKeyParameterName = "access_token",
@@ -73,11 +62,8 @@ data class TileServerOptions(
             glyphsTemplate = "/fonts/v1/{user}/{fontstack}/{range}.pbf",
             tileTemplate = "/v4/{tileset}/{z}/{x}/{y}{ratio}.{format}"
         )
-        
-        /**
-         * Configuration for MapTiler
-         */
-        fun mapTiler() = TileServerOptions(
+
+        val MapTiler = TileServerOptions(
             baseURL = "https://api.maptiler.com",
             uriSchemeAlias = "maptiler://",
             apiKeyParameterName = "key",

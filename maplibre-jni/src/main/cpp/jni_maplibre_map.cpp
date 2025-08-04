@@ -23,42 +23,62 @@
 struct MapWrapper {
     std::unique_ptr<mbgl::Map> map;
     std::unique_ptr<maplibre_jni::JniMapObserver> observer;
-    // Future: could add renderer frontend, file sources, etc.
-    
-    MapWrapper(mbgl::Map* m, maplibre_jni::JniMapObserver* o) 
-        : map(m), observer(o) {}
+    std::unique_ptr<maplibre_jni::AwtCanvasRenderer> renderer;
+
+    MapWrapper(mbgl::Map* m, maplibre_jni::JniMapObserver* o, maplibre_jni::AwtCanvasRenderer* r)
+        : map(m), observer(o), renderer(r) {}
 };
 
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeNew
-  (JNIEnv* env, jclass, jlong frontendPtr, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj) {
+  (JNIEnv* env, jclass, jobject canvasObj, jint width, jint height, jfloat pixelRatio, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj) {
     try {
-        auto* frontend = fromJavaPointer<maplibre_jni::AwtCanvasRenderer>(frontendPtr);
-        
+        // Create the renderer from the Canvas
+        auto renderer = maplibre_jni::AwtCanvasRenderer::create(
+            env, canvasObj, width, height, pixelRatio, std::nullopt
+        );
+
         // Create the JniMapObserver from the Java MapObserver object
         auto* observer = new maplibre_jni::JniMapObserver(env, mapObserverObj);
-        
+
         // Extract MapOptions from Java object
         mbgl::MapOptions mapOptions = maplibre_jni::MapOptionsConversions::extract(env, mapOptionsObj);
-        
+
         // Extract ResourceOptions from Java object
         mbgl::ResourceOptions resourceOptions = maplibre_jni::ResourceOptionsConversions::extract(env, resourceOptionsObj);
-        
+
         // Extract ClientOptions from Java object
         mbgl::ClientOptions clientOptions = maplibre_jni::ClientOptionsConversions::extract(env, clientOptionsObj);
-        
+
         auto* map = new mbgl::Map(
-            *frontend,
+            *renderer,
             *observer,
             mapOptions,
             resourceOptions,
             clientOptions
         );
-        
-        // Create wrapper to manage both map and observer lifetime
-        auto* wrapper = new MapWrapper(map, observer);
-        
+
+        // Get network file source for HTTP downloads
+        std::shared_ptr<mbgl::FileSource> networkFileSource =
+                mbgl::FileSourceManager::get()->getFileSource(
+                        mbgl::FileSourceType::Network, resourceOptions, clientOptions);
+
+
+        // Get resource loader for request management
+        std::shared_ptr<mbgl::FileSource> resourceLoader =
+                mbgl::FileSourceManager::get()->getFileSource(
+                        mbgl::FileSourceType::ResourceLoader, resourceOptions, clientOptions);
+
+
+        // Get database file source for caching
+        std::shared_ptr<mbgl::FileSource> databaseFileSource =
+                mbgl::FileSourceManager::get()->getFileSource(
+                        mbgl::FileSourceType::Database, resourceOptions, clientOptions);
+
+        // Create wrapper to manage map, observer, and renderer lifetime
+        auto* wrapper = new MapWrapper(map, observer, renderer.release());
+
         return toJavaPointer(wrapper);
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
@@ -105,10 +125,10 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeEaseTo
   (JNIEnv* env, jclass, jlong ptr, jobject cameraOptions, jint duration) {
     auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
     mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
-    
+
     mbgl::AnimationOptions animationOptions;
     animationOptions.duration = mbgl::Duration(std::chrono::milliseconds(duration));
-    
+
     wrapper->map->easeTo(options, animationOptions);
 }
 
@@ -116,10 +136,10 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeFlyTo
   (JNIEnv* env, jclass, jlong ptr, jobject cameraOptions, jint duration) {
     auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
     mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
-    
+
     mbgl::AnimationOptions animationOptions;
     animationOptions.duration = mbgl::Duration(std::chrono::milliseconds(duration));
-    
+
     wrapper->map->flyTo(options, animationOptions);
 }
 
@@ -132,40 +152,25 @@ JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptio
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetSize
   (JNIEnv* env, jclass, jlong ptr, jobject size) {
-    auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
-    mbgl::Size mbglSize = maplibre_jni::SizeConversions::extract(env, size);
-    wrapper->map->setSize(mbglSize);
-}
-
-JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeActivateFileSources
-  (JNIEnv* env, jclass, jobject resourceOptionsObj, jobject clientOptionsObj) {
     try {
-        // Extract ResourceOptions from Java object
-        mbgl::ResourceOptions resourceOptions = maplibre_jni::ResourceOptionsConversions::extract(env, resourceOptionsObj);
-        
-        // Extract ClientOptions from Java object
-        mbgl::ClientOptions clientOptions = maplibre_jni::ClientOptionsConversions::extract(env, clientOptionsObj);
-        
-        // Get network file source for HTTP downloads
-        std::shared_ptr<mbgl::FileSource> networkFileSource = 
-            mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::Network, resourceOptions, clientOptions);
-        
-        
-        // Get resource loader for request management
-        std::shared_ptr<mbgl::FileSource> resourceLoader = 
-            mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::ResourceLoader, resourceOptions, clientOptions);
-        
-        
-        // Get database file source for caching
-        std::shared_ptr<mbgl::FileSource> databaseFileSource = 
-            mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::Database, resourceOptions, clientOptions);
-        
-        
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        mbgl::Size mbglSize = maplibre_jni::SizeConversions::extract(env, size);
+        wrapper->map->setSize(mbglSize);
+
+        wrapper->renderer->updateSize(mbglSize.width, mbglSize.height);
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT jboolean JNICALL Java_com_maplibre_jni_MaplibreMap_nativeTick
+  (JNIEnv* env, jclass, jlong ptr) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        return wrapper->renderer->tick() ? JNI_TRUE : JNI_FALSE;
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return JNI_FALSE;
     }
 }
 
