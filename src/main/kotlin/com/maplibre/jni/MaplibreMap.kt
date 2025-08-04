@@ -161,6 +161,24 @@ class MaplibreMap(
         nativeSetGestureInProgress(nativePtr, inProgress)
     }
 
+    /**
+     * Converts a geographic coordinate to a screen coordinate.
+     * @param latLng The geographic coordinate
+     * @return The screen coordinate in pixels
+     */
+    fun pixelForLatLng(latLng: LatLng): ScreenCoordinate {
+        return nativePixelForLatLng(nativePtr, latLng)
+    }
+
+    /**
+     * Converts a screen coordinate to a geographic coordinate.
+     * @param pixel The screen coordinate in pixels
+     * @return The geographic coordinate
+     */
+    fun latLngForPixel(pixel: ScreenCoordinate): LatLng {
+        return nativeLatLngForPixel(nativePtr, pixel)
+    }
+
     companion object {
 
         @JvmStatic
@@ -219,5 +237,11 @@ class MaplibreMap(
 
         @JvmStatic
         private external fun nativeSetGestureInProgress(ptr: Long, inProgress: Boolean)
+
+        @JvmStatic
+        private external fun nativePixelForLatLng(ptr: Long, latLng: LatLng): ScreenCoordinate
+
+        @JvmStatic
+        private external fun nativeLatLngForPixel(ptr: Long, pixel: ScreenCoordinate): LatLng
     }
 }

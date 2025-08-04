@@ -3,6 +3,7 @@ package com.maplibre.jni
 import java.awt.Component
 import java.awt.event.*
 import kotlin.math.abs
+import kotlin.math.exp
 
 /**
  * Handles user interactions (mouse and keyboard) for a MapLibre map.
@@ -24,312 +25,326 @@ import kotlin.math.abs
  * - N: Reset north orientation
  */
 class MapInteractionHandler(
-    private val component: Component,
-    private val map: MaplibreMap,
-    private val config: Config = Config()
+  private val component: Component,
+  private val map: MaplibreMap,
+  private val config: Config = Config()
 ) : MouseListener, MouseMotionListener, MouseWheelListener, KeyListener {
 
-    data class Config(
-        val enablePan: Boolean = true,
-        val enableZoom: Boolean = true,
-        val enableRotate: Boolean = true,
-        val enableTilt: Boolean = true,
-        val enableKeyboard: Boolean = true,
-        val panSpeed: Double = 1.0,
-        val zoomSpeed: Double = 1.0,
-        val rotateSpeed: Double = 1.0,
-        val tiltSpeed: Double = 1.0
+  data class Config(
+    val enablePan: Boolean = true,
+    val enableZoom: Boolean = true,
+    val enableRotate: Boolean = true,
+    val enableTilt: Boolean = true,
+    val enableKeyboard: Boolean = true,
+    val panSpeed: Double = 1.0,
+    val zoomSpeed: Double = 1.0,
+    val rotateSpeed: Double = 1.0,
+    val tiltSpeed: Double = 1.0
+  )
+
+  private var enabled = false
+
+  // Gesture tracking
+  private var isPanning = false
+  private var isRotatingAndTilting = false  // Combined right-click gesture
+
+  // Mouse position tracking
+  private var lastX = 0.0
+  private var lastY = 0.0
+
+  // Initial position for rotation anchor
+  private var rotationAnchor: ScreenCoordinate? = null
+
+  // Double-click detection
+  private var lastClickTime = 0L
+  private val doubleClickThreshold = 400L // milliseconds
+
+  // Get pixel ratio for proper scaling
+  private val pixelRatio: Float
+    get() = (component as? java.awt.Canvas)?.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat()
+      ?: 1.0f
+
+  /**
+   * Convert mouse event to map coordinates
+   */
+  private fun toMapCoordinate(e: MouseEvent): ScreenCoordinate {
+    val pixelRatio = pixelRatio
+    return ScreenCoordinate(
+      e.x.toDouble() * pixelRatio,
+      e.y.toDouble() * pixelRatio
     )
+  }
 
-    private var enabled = false
+  /**
+   * Convert delta values to map coordinates (for pan operations)
+   */
+  private fun toMapDelta(dx: Double, dy: Double): ScreenCoordinate {
+    val pixelRatio = pixelRatio
+    return ScreenCoordinate(dx * pixelRatio, dy * pixelRatio)
+  }
 
-    // Gesture tracking
-    private var isPanning = false
-    private var isRotatingAndTilting = false  // Combined right-click gesture
+  /**
+   * Enable interaction handling
+   */
+  fun enable() {
+    if (enabled) return
 
-    // Mouse position tracking
-    private var lastX = 0.0
-    private var lastY = 0.0
-    
-    // Initial position for rotation anchor
-    private var rotationAnchorX = 0.0
-    private var rotationAnchorY = 0.0
-
-    // Double-click detection
-    private var lastClickTime = 0L
-    private val doubleClickThreshold = 400L // milliseconds
-
-    // Get pixel ratio for proper scaling
-    private val pixelRatio: Float
-        get() = (component as? java.awt.Canvas)?.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
-
-    /**
-     * Enable interaction handling
-     */
-    fun enable() {
-        if (enabled) return
-
-        component.addMouseListener(this)
-        component.addMouseMotionListener(this)
-        component.addMouseWheelListener(this)
-        if (config.enableKeyboard) {
-            component.addKeyListener(this)
-            component.isFocusable = true
-        }
-
-        enabled = true
+    component.addMouseListener(this)
+    component.addMouseMotionListener(this)
+    component.addMouseWheelListener(this)
+    if (config.enableKeyboard) {
+      component.addKeyListener(this)
+      component.isFocusable = true
     }
 
-    /**
-     * Disable interaction handling
-     */
-    fun disable() {
-        if (!enabled) return
+    enabled = true
+  }
 
-        component.removeMouseListener(this)
-        component.removeMouseMotionListener(this)
-        component.removeMouseWheelListener(this)
-        if (config.enableKeyboard) {
-            component.removeKeyListener(this)
-        }
+  /**
+   * Disable interaction handling
+   */
+  fun disable() {
+    if (!enabled) return
 
-        enabled = false
+    component.removeMouseListener(this)
+    component.removeMouseMotionListener(this)
+    component.removeMouseWheelListener(this)
+    if (config.enableKeyboard) {
+      component.removeKeyListener(this)
     }
 
-    // MouseListener implementation
-    override fun mouseClicked(e: MouseEvent) {
-        if (!enabled) return
+    enabled = false
+  }
 
-        // Only handle double-click for primary mouse button
-        if (e.button != MouseEvent.BUTTON1) return
+  // MouseListener implementation
+  override fun mouseClicked(e: MouseEvent) {
+    if (!enabled) return
 
-        val currentTime = System.currentTimeMillis()
-        val timeSinceLastClick = currentTime - lastClickTime
+    // Only handle double-click for primary mouse button
+    if (e.button != MouseEvent.BUTTON1) return
 
-        if (timeSinceLastClick < doubleClickThreshold) {
-            // Double-click detected
-            handleDoubleClick(e)
-        }
+    val currentTime = System.currentTimeMillis()
+    val timeSinceLastClick = currentTime - lastClickTime
 
-        lastClickTime = currentTime
+    if (timeSinceLastClick < doubleClickThreshold) {
+      // Double-click detected
+      handleDoubleClick(e)
     }
 
-    override fun mousePressed(e: MouseEvent) {
-        if (!enabled) return
+    lastClickTime = currentTime
+  }
 
-        lastX = e.x.toDouble()
-        lastY = e.y.toDouble()
+  override fun mousePressed(e: MouseEvent) {
+    if (!enabled) return
 
-        when {
-            // Right-click or Ctrl+Left click for rotation and tilt
-            e.button == MouseEvent.BUTTON3 ||
-            (e.button == MouseEvent.BUTTON1 && e.isControlDown) -> {
-                if (config.enableRotate || config.enableTilt) {
-                    isRotatingAndTilting = true
-                    map.setGestureInProgress(true)
-                    // Store the anchor point for rotation
-                    rotationAnchorX = e.x.toDouble()
-                    rotationAnchorY = e.y.toDouble()
-                }
-            }
-            // Left click for pan
-            e.button == MouseEvent.BUTTON1 -> {
-                if (config.enablePan) {
-                    isPanning = true
-                    map.setGestureInProgress(true)
-                }
-            }
+    lastX = e.x.toDouble()
+    lastY = e.y.toDouble()
+
+    when {
+      // Right-click or Ctrl+Left click for rotation and tilt
+      e.button == MouseEvent.BUTTON3 ||
+        (e.button == MouseEvent.BUTTON1 && e.isControlDown) -> {
+        if (config.enableRotate || config.enableTilt) {
+          isRotatingAndTilting = true
+          map.setGestureInProgress(true)
+          // Store the anchor point for rotation
+          rotationAnchor = toMapCoordinate(e)
         }
-
-        // Request focus for keyboard input
-        if (!component.hasFocus()) {
-            component.requestFocusInWindow()
+      }
+      // Left click for pan
+      e.button == MouseEvent.BUTTON1 -> {
+        if (config.enablePan) {
+          isPanning = true
+          map.setGestureInProgress(true)
         }
+      }
     }
 
-    override fun mouseReleased(e: MouseEvent) {
-        if (!enabled) return
+    // Request focus for keyboard input
+    if (!component.hasFocus()) {
+      component.requestFocusInWindow()
+    }
+  }
 
-        if (isPanning || isRotatingAndTilting) {
-            map.setGestureInProgress(false)
-        }
+  override fun mouseReleased(e: MouseEvent) {
+    if (!enabled) return
 
-        isPanning = false
-        isRotatingAndTilting = false
+    if (isPanning || isRotatingAndTilting) {
+      map.setGestureInProgress(false)
     }
 
-    override fun mouseEntered(e: MouseEvent) {}
-    override fun mouseExited(e: MouseEvent) {}
+    isPanning = false
+    isRotatingAndTilting = false
+    rotationAnchor = null  // Clear the anchor when done
+  }
 
-    // MouseMotionListener implementation
-    override fun mouseDragged(e: MouseEvent) {
-        if (!enabled) return
+  override fun mouseEntered(e: MouseEvent) {}
+  override fun mouseExited(e: MouseEvent) {}
 
-        val dx = e.x - lastX
-        val dy = e.y - lastY
+  // MouseMotionListener implementation
+  override fun mouseDragged(e: MouseEvent) {
+    if (!enabled) return
 
-        when {
-            isPanning && config.enablePan -> {
-                // Pan the map - scale by pixel ratio for proper speed
-                map.moveBy(ScreenCoordinate(
-                    dx * config.panSpeed * pixelRatio,
-                    dy * config.panSpeed * pixelRatio
-                ))
-            }
-            isRotatingAndTilting -> {
-                // Right-click drag: X for rotation, Y for pitch
-                // Both rotate around the initial click point
+    val dx = e.x - lastX
+    val dy = e.y - lastY
 
-                if (config.enableRotate && Math.abs(dx) > 0.01) {
-                    // Rotate around the anchor point where we clicked
-                    val currentCamera = map.getCameraOptions()
-                    val currentBearing = currentCamera.bearing ?: 0.0
-                    val bearingDelta = dx * config.rotateSpeed
-                    val anchor = ScreenCoordinate(
-                        rotationAnchorX * pixelRatio,
-                        rotationAnchorY * pixelRatio
-                    )
-                    
-                    // Use jumpTo with anchor to rotate around the click point
-                    map.jumpTo(
-                        CameraOptions(
-                            center = null,  // Must be null to use anchor
-                            bearing = currentBearing + bearingDelta,
-                            zoom = currentCamera.zoom,
-                            pitch = currentCamera.pitch,
-                            anchor = anchor
-                        )
-                    )
-                }
-
-                if (config.enableTilt && Math.abs(dy) > 0.01) {
-                    // Tilt based on vertical movement
-                    map.pitchBy(dy * config.tiltSpeed)
-                }
-            }
-        }
-
-        lastX = e.x.toDouble()
-        lastY = e.y.toDouble()
-    }
-
-    override fun mouseMoved(e: MouseEvent) {
-        lastX = e.x.toDouble()
-        lastY = e.y.toDouble()
-    }
-
-    // MouseWheelListener implementation
-    override fun mouseWheelMoved(e: MouseWheelEvent) {
-        if (!enabled || !config.enableZoom) return
-
-        val rotation = e.wheelRotation
-        val scrollAmount = e.scrollAmount.toDouble()
-
-        // Calculate zoom factor - positive rotation for natural scrolling (scroll up = zoom in)
-        val delta = rotation * scrollAmount * 10
-        val absDelta = abs(delta)
-        var scale = 2.0 / (1.0 + Math.exp(-absDelta / 100.0))
-
-        // Make scroll wheel a bit slower
-        scale = (scale - 1.0) / 2.0 + 1.0
-
-        // Zoom out if scrolling down (positive rotation)
-        if (delta > 0) {
-            scale = 1.0 / scale
-        }
-
-        // Apply zoom with speed adjustment - scale anchor by pixel ratio
-        val adjustedScale = 1.0 + (scale - 1.0) * config.zoomSpeed
-        map.scaleBy(
-            adjustedScale,
-            ScreenCoordinate(e.x.toDouble() * pixelRatio, e.y.toDouble() * pixelRatio)
+    when {
+      isPanning && config.enablePan -> {
+        // Pan the map
+        map.moveBy(
+          toMapDelta(
+            dx * config.panSpeed,
+            dy * config.panSpeed
+          )
         )
-    }
+      }
 
-    // KeyListener implementation
-    override fun keyPressed(e: KeyEvent) {
-        if (!enabled || !config.enableKeyboard) return
+      isRotatingAndTilting -> {
+        // Right-click drag: X for rotation, Y for pitch
+        // Both rotate around the initial click point
 
-        when (e.keyCode) {
-            // Pan with arrow keys - scale by pixel ratio
-            KeyEvent.VK_LEFT -> {
-                if (config.enablePan) {
-                    map.moveBy(ScreenCoordinate(50.0 * config.panSpeed * pixelRatio, 0.0))
-                }
-            }
-            KeyEvent.VK_RIGHT -> {
-                if (config.enablePan) {
-                    map.moveBy(ScreenCoordinate(-50.0 * config.panSpeed * pixelRatio, 0.0))
-                }
-            }
-            KeyEvent.VK_UP -> {
-                if (config.enablePan) {
-                    map.moveBy(ScreenCoordinate(0.0, 50.0 * config.panSpeed * pixelRatio))
-                }
-            }
-            KeyEvent.VK_DOWN -> {
-                if (config.enablePan) {
-                    map.moveBy(ScreenCoordinate(0.0, -50.0 * config.panSpeed * pixelRatio))
-                }
-            }
-            // Zoom with +/- keys - animated like double-click
-            KeyEvent.VK_PLUS, KeyEvent.VK_EQUALS -> {
-                if (config.enableZoom) {
-                    val currentCamera = map.getCameraOptions()
-                    val currentZoom = currentCamera.zoom ?: 0.0
-                    map.easeTo(currentCamera.copy(zoom = currentZoom + 1.0), 300)
-                }
-            }
-            KeyEvent.VK_MINUS -> {
-                if (config.enableZoom) {
-                    val currentCamera = map.getCameraOptions()
-                    val currentZoom = currentCamera.zoom ?: 0.0
-                    map.easeTo(currentCamera.copy(zoom = currentZoom - 1.0), 300)
-                }
-            }
-            // Reset north with N
-            KeyEvent.VK_N -> {
-                val current = map.getCameraOptions()
-                map.easeTo(current.copy(bearing = 0.0), 300)
-            }
-        }
-    }
+        if (config.enableRotate && abs(dx) > 0.01) {
+          // Rotate around the anchor point where we clicked
+          rotationAnchor?.let { anchor ->
+            val currentCamera = map.getCameraOptions()
+            val currentBearing = currentCamera.bearing ?: 0.0
+            val bearingDelta = dx * config.rotateSpeed
 
-    override fun keyReleased(e: KeyEvent) {}
-    override fun keyTyped(e: KeyEvent) {}
-
-    // Private helper methods
-    private fun handleDoubleClick(e: MouseEvent) {
-        if (!config.enableZoom) return
-
-        // Get current zoom and calculate new zoom
-        val currentCamera = map.getCameraOptions()
-        val currentZoom = currentCamera.zoom ?: 0.0
-        val newZoom = if (e.isShiftDown) {
-            currentZoom - 1.0  // Zoom out
-        } else {
-            currentZoom + 1.0  // Zoom in
+            // Use jumpTo with anchor to rotate around the click point
+            map.jumpTo(
+              CameraOptions.anchored(
+                anchor = anchor,
+                bearing = currentBearing + bearingDelta,
+                zoom = currentCamera.zoom,
+                pitch = currentCamera.pitch
+              )
+            )
+          }
         }
 
-        // Use the click position as the anchor point for zooming
-        // This keeps the clicked location fixed during the zoom animation
-        val anchor = ScreenCoordinate(
-            e.x.toDouble() * pixelRatio,
-            e.y.toDouble() * pixelRatio
-        )
-
-        // Animate zoom with anchor point
-        // Note: center and anchor are mutually exclusive in MapLibre
-        // We must clear the center to use the anchor
-        map.easeTo(
-            CameraOptions(
-                center = null,  // Must be null to use anchor
-                zoom = newZoom,
-                bearing = currentCamera.bearing,
-                pitch = currentCamera.pitch,
-                anchor = anchor
-            ),
-            300
-        )
+        if (config.enableTilt && abs(dy) > 0.01) {
+          // Tilt based on vertical movement
+          map.pitchBy(dy * config.tiltSpeed)
+        }
+      }
     }
+
+    lastX = e.x.toDouble()
+    lastY = e.y.toDouble()
+  }
+
+  override fun mouseMoved(e: MouseEvent) {
+    lastX = e.x.toDouble()
+    lastY = e.y.toDouble()
+  }
+
+  // MouseWheelListener implementation
+  override fun mouseWheelMoved(e: MouseWheelEvent) {
+    if (!enabled || !config.enableZoom) return
+
+    val rotation = e.wheelRotation
+    val scrollAmount = e.scrollAmount.toDouble()
+
+    // Calculate zoom factor - positive rotation for natural scrolling (scroll up = zoom in)
+    val delta = rotation * scrollAmount * 10
+    val absDelta = abs(delta)
+    var scale = 2.0 / (1.0 + exp(-absDelta / 100.0))
+
+    // Make scroll wheel a bit slower
+    scale = (scale - 1.0) / 2.0 + 1.0
+
+    // Zoom out if scrolling down (positive rotation)
+    if (delta > 0) {
+      scale = 1.0 / scale
+    }
+
+    // Apply zoom with speed adjustment
+    val adjustedScale = 1.0 + (scale - 1.0) * config.zoomSpeed
+    map.scaleBy(adjustedScale, toMapCoordinate(e))
+  }
+
+  // KeyListener implementation
+  override fun keyPressed(e: KeyEvent) {
+    if (!enabled || !config.enableKeyboard) return
+
+    when (e.keyCode) {
+      // Pan with arrow keys
+      KeyEvent.VK_LEFT -> {
+        if (config.enablePan) {
+          map.moveBy(toMapDelta(50.0 * config.panSpeed, 0.0))
+        }
+      }
+
+      KeyEvent.VK_RIGHT -> {
+        if (config.enablePan) {
+          map.moveBy(toMapDelta(-50.0 * config.panSpeed, 0.0))
+        }
+      }
+
+      KeyEvent.VK_UP -> {
+        if (config.enablePan) {
+          map.moveBy(toMapDelta(0.0, 50.0 * config.panSpeed))
+        }
+      }
+
+      KeyEvent.VK_DOWN -> {
+        if (config.enablePan) {
+          map.moveBy(toMapDelta(0.0, -50.0 * config.panSpeed))
+        }
+      }
+      // Zoom with +/- keys - animated like double-click
+      KeyEvent.VK_PLUS, KeyEvent.VK_EQUALS -> {
+        if (config.enableZoom) {
+          val currentCamera = map.getCameraOptions()
+          val currentZoom = currentCamera.zoom ?: 0.0
+          map.easeTo(currentCamera.copy(zoom = currentZoom + 1.0), 300)
+        }
+      }
+
+      KeyEvent.VK_MINUS -> {
+        if (config.enableZoom) {
+          val currentCamera = map.getCameraOptions()
+          val currentZoom = currentCamera.zoom ?: 0.0
+          map.easeTo(currentCamera.copy(zoom = currentZoom - 1.0), 300)
+        }
+      }
+      // Reset north with N
+      KeyEvent.VK_N -> {
+        val current = map.getCameraOptions()
+        map.easeTo(current.copy(bearing = 0.0), 300)
+      }
+    }
+  }
+
+  override fun keyReleased(e: KeyEvent) {}
+  override fun keyTyped(e: KeyEvent) {}
+
+  // Private helper methods
+  private fun handleDoubleClick(e: MouseEvent) {
+    if (!config.enableZoom) return
+
+    // Get current zoom and calculate new zoom
+    val currentCamera = map.getCameraOptions()
+    val currentZoom = currentCamera.zoom ?: 0.0
+    val newZoom = if (e.isShiftDown) {
+      currentZoom - 1.0  // Zoom out
+    } else {
+      currentZoom + 1.0  // Zoom in
+    }
+
+    // Use the click position as the anchor point for zooming
+    // This keeps the clicked location fixed during the zoom animation
+    val anchor = toMapCoordinate(e)
+
+    // Animate zoom with anchor point
+    map.easeTo(
+      CameraOptions.anchored(
+        anchor = anchor,
+        zoom = newZoom,
+        bearing = currentCamera.bearing,
+        pitch = currentCamera.pitch
+      ),
+      300
+    )
+  }
 }

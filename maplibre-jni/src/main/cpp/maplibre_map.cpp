@@ -8,6 +8,7 @@
 #include "conversions/clientoptions_conversions.hpp"
 #include "conversions/resourceoptions_conversions.hpp"
 #include "conversions/screencoordinate_conversions.hpp"
+#include "conversions/latlng_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -230,6 +231,32 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetGestureInProgr
         wrapper->map->setGestureInProgress(inProgress == JNI_TRUE);
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativePixelForLatLng
+  (JNIEnv* env, jclass, jlong ptr, jobject latLng) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        mbgl::LatLng coord = maplibre_jni::LatLngConversions::extract(env, latLng);
+        mbgl::ScreenCoordinate screenCoord = wrapper->map->pixelForLatLng(coord);
+        return maplibre_jni::ScreenCoordinateConversions::create(env, screenCoord);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return nullptr;
+    }
+}
+
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativeLatLngForPixel
+  (JNIEnv* env, jclass, jlong ptr, jobject screenCoordinate) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        mbgl::ScreenCoordinate coord = maplibre_jni::ScreenCoordinateConversions::extract(env, screenCoordinate);
+        mbgl::LatLng latLng = wrapper->map->latLngForPixel(coord);
+        return maplibre_jni::LatLngConversions::create(env, latLng);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return nullptr;
     }
 }
 

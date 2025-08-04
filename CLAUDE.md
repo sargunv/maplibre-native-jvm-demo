@@ -25,9 +25,9 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ✅ **MapLibre initialization**: All components initialize successfully
 - ✅ **Map observer callbacks**: All events fire correctly (style loaded, map loaded, etc.)
 - ✅ **Map rendering**: Map renders correctly with proper colors and no initial render bug
+- ✅ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
 
 ### What Isn't Yet Implemented
-- ❌ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
