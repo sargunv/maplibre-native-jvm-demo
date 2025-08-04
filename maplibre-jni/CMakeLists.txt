@@ -26,10 +26,10 @@ if(APPLE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 else()
-    # Use OpenGL ES backend on Linux/Windows
+    # Use Vulkan backend on Linux/Windows
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
-    set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
 endif()
 
 set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
@@ -66,9 +66,9 @@ if(APPLE)
         src/main/cpp/awt_metal_backend.mm
     )
 else()
-    # OpenGL ES backend for Linux/Windows (stub for now)
+    # Vulkan backend for Linux/Windows
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_gl_backend.cpp
+        src/main/cpp/awt_vulkan_backend.cpp
     )
 endif()
 
@@ -125,21 +125,20 @@ else()
         target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
     endif()
 
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(EGL REQUIRED egl)
-    pkg_check_modules(GLES REQUIRED glesv2)
+    # Find X11 for window system integration
     find_package(X11 REQUIRED)
     
+    # Find Vulkan
+    find_package(Vulkan REQUIRED)
+    
     target_link_libraries(maplibre-jni PRIVATE 
-        ${EGL_LIBRARIES}
-        ${GLES_LIBRARIES}
         ${X11_LIBRARIES}
+        Vulkan::Vulkan
     )
     
     target_include_directories(maplibre-jni PRIVATE
-        ${EGL_INCLUDE_DIRS}
-        ${GLES_INCLUDE_DIRS}
         ${X11_INCLUDE_DIR}
+        ${Vulkan_INCLUDE_DIRS}
     )
 endif()
 
