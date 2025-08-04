@@ -48,26 +48,24 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/jni_mapoptions.cpp
     src/main/cpp/jni_resourceoptions.cpp
     src/main/cpp/jni_clientoptions.cpp
-    src/main/cpp/jni_run_loop.cpp
     src/main/cpp/jni_map_observer.cpp
     src/main/cpp/jni_native_map_observer.cpp
     src/main/cpp/jni_maplibre_map.cpp
-    src/main/cpp/jni_renderer_frontend.cpp
-    src/main/cpp/jni_renderer_frontend_impl.cpp
-    src/main/cpp/jni_jawt_backend.cpp
-    src/main/cpp/jni_jawt_renderer_backend.cpp
+    # New unified renderer architecture
+    src/main/cpp/jni_awt_canvas_renderer.cpp
+    src/main/cpp/jni_awt_platform_factory.cpp
 )
 
 # Add platform-specific backend sources
 if(APPLE)
     # Metal backend for macOS
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/jni_metal_backend.mm
+        src/main/cpp/jni_awt_metal_backend.mm
     )
 else()
-    # Vulkan backend for Linux/Windows (stub for now)
+    # OpenGL ES backend for Linux/Windows (stub for now)
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/jni_vulkan_backend.cpp
+        src/main/cpp/jni_awt_gl_backend.cpp
     )
 endif()
 

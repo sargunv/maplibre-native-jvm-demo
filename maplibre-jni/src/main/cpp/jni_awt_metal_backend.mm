@@ -1,6 +1,5 @@
 #ifdef __APPLE__
 
-#include "jni_jawt_backend.hpp"
 #include <mbgl/mtl/renderer_backend.hpp>
 #include <mbgl/mtl/renderable_resource.hpp>
 #include <mbgl/mtl/mtl_fwd.hpp>
@@ -16,39 +15,46 @@
 #include <jawt.h>
 #include <jawt_md.h>
 
+#include <memory>
+#include <jni.h>
+
 namespace maplibre_jni {
 
-// Metal backend implementation - mimics GLFW structure exactly
+// Metal backend implementation for AWT Canvas
 class MetalBackend final : public mbgl::mtl::RendererBackend,
-                          public mbgl::gfx::Renderable,
-                          public JAWTRendererBackend {
+                          public mbgl::gfx::Renderable {
 public:
     MetalBackend(JNIEnv* env, jobject canvas, int width, int height);
     ~MetalBackend() override;
 
-    // JAWTRendererBackend implementation
-    void updateSize(int width, int height) override;
-    void swap() override;
-    void* getRendererBackend() override { return static_cast<mbgl::mtl::RendererBackend*>(this); }
-
     // mbgl::gfx::RendererBackend implementation
-    mbgl::gfx::Renderable& getDefaultRenderable() override { return *this; }
-
-    // mbgl::mtl::RendererBackend implementation - exact copy from GLFW
+    mbgl::gfx::Renderable& getDefaultRenderable() override;
+    
+    // mbgl::mtl::RendererBackend implementation
     void activate() override {}
     void deactivate() override {}
     void updateAssumedState() override {}
-
-    void setSize(mbgl::Size size_);
+    
+    // Size management
+    void setSize(mbgl::Size size);
     mbgl::Size getSize() const;
 
 private:
     void setupMetalLayer(JNIEnv* env, jobject canvas);
     void releaseNativeWindow();
-
+    
+    JNIEnv* getEnv();
+    
+    // Size
+    mbgl::Size size;
+    
     // JAWT structures
     void* jawtDrawingSurface = nullptr;
     void* jawtDrawingSurfaceInfo = nullptr;
+    
+    // JNI references
+    JavaVM* jvm = nullptr;
+    jobject canvasRef = nullptr;
 };
 
 } // namespace maplibre_jni
@@ -57,7 +63,7 @@ namespace mbgl {
 
 using namespace mtl;
 
-// Metal renderable resource - exact copy from GLFW
+// Metal renderable resource - exact copy from existing implementation
 class MetalRenderableResource final : public mtl::RenderableResource {
 public:
     MetalRenderableResource(maplibre_jni::MetalBackend& backend)
@@ -102,97 +108,137 @@ public:
             stencilTexture->setFormat(gfx::TexturePixelType::Stencil, gfx::TextureChannelDataType::UnsignedByte);
             stencilTexture->setSamplerConfiguration(
                 {gfx::TextureFilterType::Linear, gfx::TextureWrapType::Clamp, gfx::TextureWrapType::Clamp});
-            static_cast<mtl::Texture2D*>(stencilTexture.get())
-                ->setUsage(MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsageRenderTarget);
+            static_cast<mtl::Texture2D*>(stencilTexture.get())->setUsage(
+                MTL::TextureUsageShaderRead | MTL::TextureUsageShaderWrite | MTL::TextureUsageRenderTarget);
         }
 
-        if (depthTexture) {
-            depthTexture->create();
-            if (auto* depthTarget = renderPassDescriptor->depthAttachment()) {
-                depthTarget->setTexture(static_cast<mtl::Texture2D*>(depthTexture.get())->getMetalTexture());
-            }
-        }
-        if (stencilTexture) {
-            stencilTexture->create();
-            if (auto* stencilTarget = renderPassDescriptor->stencilAttachment()) {
-                stencilTarget->setTexture(static_cast<mtl::Texture2D*>(stencilTexture.get())->getMetalTexture());
-            }
-        }
+        renderPassDescriptor->depthAttachment()->setTexture(
+            static_cast<mtl::Texture2D*>(depthTexture.get())->getMetalTexture());
+        renderPassDescriptor->stencilAttachment()->setTexture(
+            static_cast<mtl::Texture2D*>(stencilTexture.get())->getMetalTexture());
+
+        renderPassDescriptor->colorAttachments()->object(0)->setClearColor(
+            MTL::ClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+        renderPassDescriptor->colorAttachments()->object(0)->setLoadAction(MTL::LoadActionClear);
+        renderPassDescriptor->colorAttachments()->object(0)->setStoreAction(MTL::StoreActionStore);
+        renderPassDescriptor->depthAttachment()->setClearDepth(1.0);
+        renderPassDescriptor->depthAttachment()->setLoadAction(MTL::LoadActionClear);
+        renderPassDescriptor->depthAttachment()->setStoreAction(MTL::StoreActionDontCare);
+        renderPassDescriptor->stencilAttachment()->setClearStencil(0);
+        renderPassDescriptor->stencilAttachment()->setLoadAction(MTL::LoadActionClear);
+        renderPassDescriptor->stencilAttachment()->setStoreAction(MTL::StoreActionDontCare);
     }
 
     void swap() override {
-        commandBuffer->presentDrawable(surface.get());
-        commandBuffer->commit();
-        commandBuffer.reset();
-        renderPassDescriptor.reset();
+        if (commandBuffer) {
+            commandBuffer->presentDrawable(surface.get());
+            commandBuffer->commit();
+        }
     }
 
-    const mtl::RendererBackend& getBackend() const override {
+    void setClearColor(const mbgl::Color& color) {
+        clearColor = color;
+    }
+
+    const mbgl::mtl::RendererBackend& getBackend() const override {
         return rendererBackend;
     }
 
-    const mtl::MTLCommandBufferPtr& getCommandBuffer() const override {
+    const MTLCommandBufferPtr& getCommandBuffer() const override {
         return commandBuffer;
     }
 
-    mtl::MTLBlitPassDescriptorPtr getUploadPassDescriptor() const override {
-        return NS::TransferPtr(MTL::BlitPassDescriptor::alloc()->init());
+    MTLBlitPassDescriptorPtr getUploadPassDescriptor() const override {
+        return MTLBlitPassDescriptorPtr();
     }
 
-    const mtl::MTLRenderPassDescriptorPtr& getRenderPassDescriptor() const override {
+    const MTLRenderPassDescriptorPtr& getRenderPassDescriptor() const override {
         return renderPassDescriptor;
     }
 
-    const CAMetalLayerPtr& getSwapchain() const {
-        return swapchain;
-    }
+    NS::SharedPtr<CA::MetalLayer> swapchain;
 
 private:
-    maplibre_jni::MetalBackend& rendererBackend;
-    MTLCommandQueuePtr commandQueue;
+    mbgl::mtl::RendererBackend& rendererBackend;
+    mbgl::Color clearColor{0.0, 0.0, 0.0, 1.0};
+    mbgl::Size size{0, 0};
+    NS::SharedPtr<MTL::CommandQueue> commandQueue;
+    NS::SharedPtr<CA::MetalDrawable> surface;
     MTLCommandBufferPtr commandBuffer;
     MTLRenderPassDescriptorPtr renderPassDescriptor;
-    CAMetalDrawablePtr surface;
-    CAMetalLayerPtr swapchain;
     gfx::Texture2DPtr depthTexture;
     gfx::Texture2DPtr stencilTexture;
-    mbgl::Size size;
-    bool buffersInvalid = true;
+    bool buffersInvalid = false;
 };
 
 } // namespace mbgl
 
 namespace maplibre_jni {
 
-// MetalBackend implementation - mimics GLFW constructor
-MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width_, int height_)
+// MetalBackend implementation
+
+MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width, int height)
     : mbgl::mtl::RendererBackend(mbgl::gfx::ContextMode::Unique),
       mbgl::gfx::Renderable(mbgl::Size{0, 0}, std::make_unique<mbgl::MetalRenderableResource>(*this)),
-      JAWTRendererBackend(env, canvas, width_, height_) {
+      size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)}) {
+    
+    // Get JavaVM for later use
+    env->GetJavaVM(&jvm);
+    canvasRef = env->NewGlobalRef(canvas);
+    
+    // Configure the Metal layer via Objective-C
+    auto& resource = getResource<mbgl::MetalRenderableResource>();
+    resource.setBackendSize(size);
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
+    
+    // Get the backing scale factor for proper Retina display support
+    NSScreen* screen = [NSScreen mainScreen];
+    CGFloat scale = screen.backingScaleFactor;
+    
+    // Set the frame accounting for the scale factor (convert from pixels to points)
+    metalLayer.frame = CGRectMake(0, 0, width / scale, height / scale);
+    metalLayer.opaque = YES;
+    metalLayer.contentsScale = scale;
+    metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    
+    // Now set up the Metal layer on the AWT Canvas
     setupMetalLayer(env, canvas);
-    setSize(mbgl::Size{static_cast<uint32_t>(width_), static_cast<uint32_t>(height_)});
 }
 
 MetalBackend::~MetalBackend() {
     releaseNativeWindow();
+    
+    if (canvasRef && jvm) {
+        JNIEnv* env = getEnv();
+        if (env) {
+            env->DeleteGlobalRef(canvasRef);
+        }
+    }
 }
 
-void MetalBackend::updateSize(int width_, int height_) {
-    width = width_;
-    height = height_;
-    setSize(mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+void MetalBackend::setSize(mbgl::Size newSize) {
+    size = newSize;
+    auto& resource = getResource<mbgl::MetalRenderableResource>();
+    resource.setBackendSize(size);
+    
+    // Update the Metal layer frame via Objective-C
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
+    
+    // Get the backing scale factor for proper Retina display support
+    NSScreen* screen = [NSScreen mainScreen];
+    CGFloat scale = screen.backingScaleFactor;
+    
+    // Set the frame accounting for the scale factor
+    metalLayer.frame = CGRectMake(0, 0, size.width / scale, size.height / scale);
+    metalLayer.contentsScale = scale;
 }
 
-void MetalBackend::swap() {
-    // Not needed - the resource handles swapping
-}
-
-void MetalBackend::setSize(mbgl::Size size_) {
-    getResource<mbgl::MetalRenderableResource>().setBackendSize(size_);
+mbgl::gfx::Renderable& MetalBackend::getDefaultRenderable() {
+    return *this;
 }
 
 mbgl::Size MetalBackend::getSize() const {
-    return getResource<mbgl::MetalRenderableResource>().getSize();
+    return size;
 }
 
 void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
@@ -216,7 +262,7 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
     // Lock the drawing surface
     jint lock = ds->Lock(ds);
     if ((lock & JAWT_LOCK_ERROR) != 0) {
-        mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to lock drawing surface");
+        mbgl::Log::Error(mbgl::Event::OpenGL, "Error locking drawing surface");
         awt.FreeDrawingSurface(ds);
         return;
     }
@@ -230,31 +276,21 @@ void MetalBackend::setupMetalLayer(JNIEnv* env, jobject canvas) {
         return;
     }
 
-    // Get the platform-specific info
+    // Get the platform-specific drawing info
     id<JAWT_SurfaceLayers> surfaceLayers = (id<JAWT_SurfaceLayers>)dsi->platformInfo;
     if (!surfaceLayers) {
-        mbgl::Log::Error(mbgl::Event::OpenGL, "platformInfo is null");
+        mbgl::Log::Error(mbgl::Event::OpenGL, "Platform info is null");
         ds->FreeDrawingSurfaceInfo(dsi);
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
         return;
     }
 
-    // Get the CAMetalLayer from our renderable resource
-    CALayer* metalLayer = (__bridge CALayer*)getDefaultRenderable().getResource<mbgl::MetalRenderableResource>().getSwapchain().get();
-    CAMetalLayer* metalLayerTyped = (CAMetalLayer*)metalLayer;
-
-    // Configure the Metal layer properly
-    metalLayerTyped.opaque = YES;
-    metalLayerTyped.contentsScale = [[NSScreen mainScreen] backingScaleFactor];
-    metalLayerTyped.pixelFormat = MTLPixelFormatBGRA8Unorm;
-    metalLayerTyped.framebufferOnly = YES;
-
-    // Without this, the map doesn't render until the window is resized
-    metalLayerTyped.frame = CGRectMake(0, 0, width / [[NSScreen mainScreen] backingScaleFactor],
-                                             height / [[NSScreen mainScreen] backingScaleFactor]);
-
-    // Set the layer
+    // Get the Metal layer from our resource and set it on the JAWT surface
+    auto& resource = getResource<mbgl::MetalRenderableResource>();
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
+    
+    // Set the Metal layer on the JAWT surface
     surfaceLayers.layer = metalLayer;
 
     // Store references for cleanup
@@ -281,8 +317,22 @@ void MetalBackend::releaseNativeWindow() {
     }
 }
 
-// Factory function implementation
-std::unique_ptr<JAWTRendererBackend> createPlatformBackend(JNIEnv* env, jobject canvas, int width, int height) {
+JNIEnv* MetalBackend::getEnv() {
+    JNIEnv* env = nullptr;
+    if (jvm) {
+        jvm->AttachCurrentThread((void**)&env, nullptr);
+    }
+    return env;
+}
+
+// Factory function
+std::unique_ptr<mbgl::gfx::RendererBackend> createMetalBackend(
+    JNIEnv* env, 
+    jobject canvas, 
+    int width, 
+    int height,
+    const mbgl::gfx::ContextMode contextMode
+) {
     return std::make_unique<MetalBackend>(env, canvas, width, height);
 }
 

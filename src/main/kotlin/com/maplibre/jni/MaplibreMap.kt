@@ -8,7 +8,7 @@ import java.lang.ref.Cleaner
  * for interacting with the map.
  */
 class MaplibreMap(
-    rendererFrontend: RendererFrontend,
+    renderer: AwtCanvasRenderer,
     mapObserver: MapObserver,
     mapOptions: MapOptions,
     resourceOptions: ResourceOptions,
@@ -20,7 +20,7 @@ class MaplibreMap(
     
     // Create the map with all the components
     private val nativePtr: Long = nativeNew(
-        rendererFrontend.nativePtr,
+        renderer.getRendererFrontend(),
         nativeObserver.nativePtr,
         mapOptions.nativePtr,
         resourceOptions.nativePtr,

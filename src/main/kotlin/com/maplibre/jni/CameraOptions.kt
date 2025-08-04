@@ -1,7 +1,7 @@
 package com.maplibre.jni
 
 class CameraOptions internal constructor(
-    private val createNative: () -> Long = ::nativeNew
+    createNative: () -> Long = ::nativeNew
 ) : NativeObject(
     new = createNative,
     destroy = ::nativeDestroy
@@ -11,17 +11,17 @@ class CameraOptions internal constructor(
         nativeSetCenter(nativePtr, center?.nativePtr ?: 0L)
         return this
     }
-    
+
     fun withPadding(padding: EdgeInsets?): CameraOptions {
         nativeSetPadding(nativePtr, padding?.nativePtr ?: 0L)
         return this
     }
-    
+
     fun withAnchor(anchor: ScreenCoordinate?): CameraOptions {
         nativeSetAnchor(nativePtr, anchor?.nativePtr ?: 0L)
         return this
     }
-    
+
     fun withZoom(zoom: Double?): CameraOptions {
         if (zoom == null) {
             nativeSetZoomOptional(nativePtr, 0.0, false)
@@ -30,7 +30,7 @@ class CameraOptions internal constructor(
         }
         return this
     }
-    
+
     fun withBearing(bearing: Double?): CameraOptions {
         if (bearing == null) {
             nativeSetBearingOptional(nativePtr, 0.0, false)
@@ -39,7 +39,7 @@ class CameraOptions internal constructor(
         }
         return this
     }
-    
+
     fun withPitch(pitch: Double?): CameraOptions {
         if (pitch == null) {
             nativeSetPitchOptional(nativePtr, 0.0, false)
@@ -48,34 +48,34 @@ class CameraOptions internal constructor(
         }
         return this
     }
-    
+
     val center: LatLng? get() {
         val ptr = nativeGetCenter(nativePtr)
         return if (ptr == 0L) null else LatLng { ptr }
     }
-    
+
     val padding: EdgeInsets? get() {
         val ptr = nativeGetPadding(nativePtr)
         return if (ptr == 0L) null else EdgeInsets { ptr }
     }
-    
+
     val anchor: ScreenCoordinate? get() {
         val ptr = nativeGetAnchor(nativePtr)
         return if (ptr == 0L) null else ScreenCoordinate { ptr }
     }
-    
+
     val zoom: Double? get() = nativeGetZoomOptional(nativePtr)
-    
+
     val bearing: Double? get() = nativeGetBearingOptional(nativePtr)
-    
+
     val pitch: Double? get() = nativeGetPitchOptional(nativePtr)
-    
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is CameraOptions) return false
         return nativeEquals(nativePtr, other.nativePtr)
     }
-    
+
     override fun hashCode(): Int {
         var result = center?.hashCode() ?: 0
         result = 31 * result + (padding?.hashCode() ?: 0)
@@ -85,12 +85,12 @@ class CameraOptions internal constructor(
         result = 31 * result + (pitch?.hashCode() ?: 0)
         return result
     }
-    
+
     private companion object {
         init {
             MapLibreNativeLoader.load()
         }
-        
+
         @JvmStatic external fun nativeNew(): Long
         @JvmStatic external fun nativeDestroy(ptr: Long)
         @JvmStatic external fun nativeSetCenter(ptr: Long, centerPtr: Long)

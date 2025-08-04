@@ -157,7 +157,9 @@ src/main/kotlin/Main.kt         # Demo application
 ## Memories and Notes
 
 ### Build and Development Notes
-- Never do a ./gradlew clean. This requires rebuilding maplibre native from scratch, which takes a long time.
+- Never do a ./gradlew clean. This requires rebuilding maplibre native from scratch, which takes a long time.\
+- Similarly, never do an rm -rf /Users/sargunv/Code/maplibre-native-jvm-demo/maplibre-jni/build/cmake
+- Instead, allow cmake to update the configuration files as needed.
 
 ## Implementation Decision: Native Multiplatform Backends (2025-08-03)
 

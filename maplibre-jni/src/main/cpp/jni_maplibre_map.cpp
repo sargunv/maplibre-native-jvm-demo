@@ -1,6 +1,6 @@
 #include "generated/kotlin/main/com_maplibre_jni_MaplibreMap.h"
 #include "jni_helpers.hpp"
-#include "jni_renderer_frontend.hpp"
+#include "jni_awt_canvas_renderer.hpp"
 #include "jni_map_observer.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
@@ -18,7 +18,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeNew
   (JNIEnv* env, jclass, jlong frontendPtr, jlong observerPtr, jlong mapOptionsPtr, jlong resourceOptionsPtr, jlong clientOptionsPtr) {
     try {
-        auto* frontend = fromJavaPointer<maplibre_jni::RendererFrontend>(frontendPtr);
+        auto* frontend = fromJavaPointer<maplibre_jni::AwtCanvasRenderer>(frontendPtr);
         auto* observer = fromJavaPointer<maplibre_jni::JniMapObserver>(observerPtr);
         auto* mapOptions = fromJavaPointer<mbgl::MapOptions>(mapOptionsPtr);
         auto* resourceOptions = fromJavaPointer<mbgl::ResourceOptions>(resourceOptionsPtr);

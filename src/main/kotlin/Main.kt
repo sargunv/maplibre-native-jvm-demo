@@ -18,14 +18,8 @@ fun main() {
     canvas.background = Color.BLUE
 
     // MapLibre components
-    var runLoop: RunLoop? = null
     var map: MaplibreMap? = null
-    var backend: JAWTRendererBackend? = null
-    var frontend: RendererFrontend? = null
-
-    // Rendering state
-    var dirty = false
-    val invalidate = { dirty = true }
+    var renderer: AwtCanvasRenderer? = null
 
     // Spinner for visual feedback
     val spinnerFrames = listOf("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
@@ -47,15 +41,12 @@ fun main() {
             ?: 1.0f
         val pixelWidth = (canvas.width * scale).toInt()
         val pixelHeight = (canvas.height * scale).toInt()
-        backend?.updateSize(pixelWidth, pixelHeight)
+        renderer?.updateSize(pixelWidth, pixelHeight)
         map?.setSize(Size(pixelWidth, pixelHeight))
-        invalidate() // Request render after resize
       }
 
       fun initializeMapLibre() {
         try {
-          runLoop = RunLoop()
-
           // Calculate pixel ratio and dimensions BEFORE creating components
           // This matches how GLFW handles it: framebuffer size / window size
           val scale =
@@ -66,11 +57,8 @@ fun main() {
 
           println("Canvas size: ${canvas.width}x${canvas.height}, scale: $scale, pixel size: ${pixelWidth}x${pixelHeight}")
 
-          // Create backend with pixel dimensions (framebuffer size)
-          backend = JAWTRendererBackend(canvas, pixelWidth, pixelHeight)
-
-          // Create frontend with proper pixel ratio and update callback
-          frontend = RendererFrontend(backend.getRendererBackend(), scale, invalidate)
+          // Create unified renderer with pixel dimensions
+          renderer = AwtCanvasRenderer(canvas, pixelWidth, pixelHeight, scale)
 
           val observer = object : MapObserver {
             override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
@@ -138,7 +126,7 @@ fun main() {
             .withSize(Size(pixelWidth, pixelHeight))  // Use pixel dimensions
 
           map = MaplibreMap(
-            rendererFrontend = frontend,
+            renderer = renderer,
             mapObserver = observer,
             mapOptions = mapOptions,
             resourceOptions = resourceOptions,
@@ -149,9 +137,8 @@ fun main() {
           map.activateFileSources()
 
           // CRITICAL: Set sizes again after map creation (like GLFW does)
-          // GLFW sets both backend and map sizes after creation
           println("Setting initial size: ${pixelWidth}x${pixelHeight}")
-          backend.updateSize(pixelWidth, pixelHeight)
+          renderer.updateSize(pixelWidth, pixelHeight)
           map.setSize(Size(pixelWidth, pixelHeight))
 
           // Load a style
@@ -185,18 +172,12 @@ fun main() {
     val frame = JFrame("MapLibre Native JVM Demo")
     frame.background = Color.RED
 
-    // Create render timer
+    // Create render timer - simplified with tick-based approach
     val renderTimer = Timer(16) { // ~60 FPS
-      runLoop?.runOnce()
-
-      // Only render when dirty (map has changes)
-      if (dirty && frontend != null) {
-        dirty = false
-        frontend.render()
-
-//        canvas.setSize(canvas.width + (frameCount % 2).toInt(), canvas.height)
-
-        // Update spinner in title to show rendering activity
+      val didRender = renderer?.tick() ?: false
+      
+      // Update spinner in title to show rendering activity
+      if (didRender) {
         frameCount++
         spinnerIndex = (spinnerIndex + 1) % spinnerFrames.size
         frame.title = "MapLibre Native JVM Demo ${spinnerFrames[spinnerIndex]}"
