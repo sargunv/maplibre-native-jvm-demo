@@ -7,6 +7,7 @@
 #include "conversions/mapoptions_conversions.hpp"
 #include "conversions/clientoptions_conversions.hpp"
 #include "conversions/resourceoptions_conversions.hpp"
+#include "conversions/screencoordinate_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -171,6 +172,64 @@ JNIEXPORT jboolean JNICALL Java_com_maplibre_jni_MaplibreMap_nativeTick
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
         return JNI_FALSE;
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeMoveBy
+  (JNIEnv* env, jclass, jlong ptr, jobject screenCoordinate) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        mbgl::ScreenCoordinate coord = maplibre_jni::ScreenCoordinateConversions::extract(env, screenCoordinate);
+        wrapper->map->moveBy(coord);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeScaleBy
+  (JNIEnv* env, jclass, jlong ptr, jdouble scale, jobject anchor) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        if (anchor != nullptr) {
+            mbgl::ScreenCoordinate anchorCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, anchor);
+            wrapper->map->scaleBy(scale, anchorCoord);
+        } else {
+            wrapper->map->scaleBy(scale, std::nullopt);
+        }
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeRotateBy
+  (JNIEnv* env, jclass, jlong ptr, jobject first, jobject second) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        mbgl::ScreenCoordinate firstCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, first);
+        mbgl::ScreenCoordinate secondCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, second);
+        wrapper->map->rotateBy(firstCoord, secondCoord);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativePitchBy
+  (JNIEnv* env, jclass, jlong ptr, jdouble pitch) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        wrapper->map->pitchBy(pitch);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetGestureInProgress
+  (JNIEnv* env, jclass, jlong ptr, jboolean inProgress) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        wrapper->map->setGestureInProgress(inProgress == JNI_TRUE);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
     }
 }
 

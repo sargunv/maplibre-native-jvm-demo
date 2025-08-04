@@ -38,6 +38,7 @@ class MaplibreCanvas(
       val pixelRatio =
         graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
 
+      // Should match the canvas size
       val adjustedMapOptions = mapOptions.copy(
         pixelRatio = pixelRatio,
         size = Size(

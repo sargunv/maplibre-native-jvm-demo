@@ -118,6 +118,49 @@ class MaplibreMap(
         nativeSetSize(nativePtr, size)
     }
 
+    /**
+     * Moves the map by the given screen coordinate offset.
+     * @param screenCoordinate The offset to move by in pixels
+     */
+    fun moveBy(screenCoordinate: ScreenCoordinate) {
+        nativeMoveBy(nativePtr, screenCoordinate)
+    }
+
+    /**
+     * Scales the map by the given factor.
+     * @param scale The scale factor (2.0 = zoom in, 0.5 = zoom out)
+     * @param anchor Optional anchor point for the scale operation
+     */
+    fun scaleBy(scale: Double, anchor: ScreenCoordinate? = null) {
+        nativeScaleBy(nativePtr, scale, anchor)
+    }
+
+    /**
+     * Rotates the map from the first screen coordinate to the second.
+     * @param first The starting point of the rotation gesture
+     * @param second The ending point of the rotation gesture
+     */
+    fun rotateBy(first: ScreenCoordinate, second: ScreenCoordinate) {
+        nativeRotateBy(nativePtr, first, second)
+    }
+
+    /**
+     * Changes the map pitch by the given amount.
+     * @param pitch The pitch change in degrees
+     */
+    fun pitchBy(pitch: Double) {
+        nativePitchBy(nativePtr, pitch)
+    }
+
+    /**
+     * Sets whether a gesture is currently in progress.
+     * This helps the map optimize rendering during user interaction.
+     * @param inProgress True if a gesture is in progress
+     */
+    fun setGestureInProgress(inProgress: Boolean) {
+        nativeSetGestureInProgress(nativePtr, inProgress)
+    }
+
     companion object {
 
         @JvmStatic
@@ -161,5 +204,20 @@ class MaplibreMap(
 
         @JvmStatic
         private external fun nativeTick(ptr: Long): Boolean
+
+        @JvmStatic
+        private external fun nativeMoveBy(ptr: Long, screenCoordinate: ScreenCoordinate)
+
+        @JvmStatic
+        private external fun nativeScaleBy(ptr: Long, scale: Double, anchor: ScreenCoordinate?)
+
+        @JvmStatic
+        private external fun nativeRotateBy(ptr: Long, first: ScreenCoordinate, second: ScreenCoordinate)
+
+        @JvmStatic
+        private external fun nativePitchBy(ptr: Long, pitch: Double)
+
+        @JvmStatic
+        private external fun nativeSetGestureInProgress(ptr: Long, inProgress: Boolean)
     }
 }

@@ -123,12 +123,9 @@ maplibre-jni/
 ├── build.gradle.kts            # Gradle with CMake integration
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
-    ├── jni_*_types.cpp         # Core type wrappers
-    ├── jni_jawt_backend.hpp    # Base JAWT backend interface
-    ├── jni_metal_backend.mm    # Metal backend for macOS
-    ├── jni_gl_backend.cpp      # OpenGL ES backend for Linux
-    ├── jni_renderer_frontend_impl.cpp  # Renderer frontend
-    └── jni_maplibre_map.cpp    # Map and observer wrappers
+    ├── metal_backend.mm    # Metal backend for macOS
+    ├── gl_backend.cpp      # OpenGL ES backend for Linux
+    └── maplibre_map.cpp    # Map and observer wrappers
 
 src/main/kotlin/
 └── com/maplibre/jni/           # Kotlin API layer
