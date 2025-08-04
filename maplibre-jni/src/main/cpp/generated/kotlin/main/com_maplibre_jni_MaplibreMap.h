@@ -51,33 +51,33 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeLoadStyleJSON
 /*
  * Class:     com_maplibre_jni_MaplibreMap
  * Method:    nativeJumpTo
- * Signature: (JJ)V
+ * Signature: (JLcom/maplibre/jni/CameraOptions;)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeJumpTo
-  (JNIEnv *, jclass, jlong, jlong);
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     com_maplibre_jni_MaplibreMap
  * Method:    nativeEaseTo
- * Signature: (JJI)V
+ * Signature: (JLcom/maplibre/jni/CameraOptions;I)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeEaseTo
-  (JNIEnv *, jclass, jlong, jlong, jint);
+  (JNIEnv *, jclass, jlong, jobject, jint);
 
 /*
  * Class:     com_maplibre_jni_MaplibreMap
  * Method:    nativeFlyTo
- * Signature: (JJI)V
+ * Signature: (JLcom/maplibre/jni/CameraOptions;I)V
  */
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeFlyTo
-  (JNIEnv *, jclass, jlong, jlong, jint);
+  (JNIEnv *, jclass, jlong, jobject, jint);
 
 /*
  * Class:     com_maplibre_jni_MaplibreMap
  * Method:    nativeGetCameraOptions
- * Signature: (J)J
+ * Signature: (J)Lcom/maplibre/jni/CameraOptions;
  */
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
   (JNIEnv *, jclass, jlong);
 
 /*

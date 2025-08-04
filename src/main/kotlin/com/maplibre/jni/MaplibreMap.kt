@@ -68,7 +68,7 @@ class MaplibreMap(
      * @param options The camera options to apply
      */
     fun jumpTo(options: CameraOptions) {
-        nativeJumpTo(nativePtr, options.nativePtr)
+        nativeJumpTo(nativePtr, options)
     }
     
     /**
@@ -77,7 +77,7 @@ class MaplibreMap(
      * @param duration The duration of the animation in milliseconds
      */
     fun easeTo(options: CameraOptions, duration: Int = 300) {
-        nativeEaseTo(nativePtr, options.nativePtr, duration)
+        nativeEaseTo(nativePtr, options, duration)
     }
     
     /**
@@ -86,7 +86,7 @@ class MaplibreMap(
      * @param duration The duration of the animation in milliseconds
      */
     fun flyTo(options: CameraOptions, duration: Int = 1000) {
-        nativeFlyTo(nativePtr, options.nativePtr, duration)
+        nativeFlyTo(nativePtr, options, duration)
     }
     
     /**
@@ -94,8 +94,7 @@ class MaplibreMap(
      * @return The current camera position and orientation
      */
     fun getCameraOptions(): CameraOptions {
-        val ptr = nativeGetCameraOptions(nativePtr)
-        return CameraOptions(createNative = { ptr })
+        return nativeGetCameraOptions(nativePtr)
     }
     
     /**
@@ -139,16 +138,16 @@ class MaplibreMap(
         private external fun nativeLoadStyleJSON(ptr: Long, json: String)
         
         @JvmStatic
-        private external fun nativeJumpTo(ptr: Long, cameraOptionsPtr: Long)
+        private external fun nativeJumpTo(ptr: Long, cameraOptions: CameraOptions)
         
         @JvmStatic
-        private external fun nativeEaseTo(ptr: Long, cameraOptionsPtr: Long, duration: Int)
+        private external fun nativeEaseTo(ptr: Long, cameraOptions: CameraOptions, duration: Int)
         
         @JvmStatic
-        private external fun nativeFlyTo(ptr: Long, cameraOptionsPtr: Long, duration: Int)
+        private external fun nativeFlyTo(ptr: Long, cameraOptions: CameraOptions, duration: Int)
         
         @JvmStatic
-        private external fun nativeGetCameraOptions(ptr: Long): Long
+        private external fun nativeGetCameraOptions(ptr: Long): CameraOptions
         
         @JvmStatic
         private external fun nativeSetSize(ptr: Long, size: Size)

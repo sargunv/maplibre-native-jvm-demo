@@ -3,6 +3,7 @@
 #include "jni_awt_canvas_renderer.hpp"
 #include "jni_map_observer.hpp"
 #include "conversions/jni_size_conversions.hpp"
+#include "conversions/jni_cameraoptions_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -68,39 +69,39 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeLoadStyleJSON
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeJumpTo
-  (JNIEnv* env, jclass, jlong ptr, jlong cameraOptionsPtr) {
+  (JNIEnv* env, jclass, jlong ptr, jobject cameraOptions) {
     auto* map = fromJavaPointer<mbgl::Map>(ptr);
-    auto* cameraOptions = fromJavaPointer<mbgl::CameraOptions>(cameraOptionsPtr);
-    map->jumpTo(*cameraOptions);
+    mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
+    map->jumpTo(options);
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeEaseTo
-  (JNIEnv* env, jclass, jlong ptr, jlong cameraOptionsPtr, jint duration) {
+  (JNIEnv* env, jclass, jlong ptr, jobject cameraOptions, jint duration) {
     auto* map = fromJavaPointer<mbgl::Map>(ptr);
-    auto* cameraOptions = fromJavaPointer<mbgl::CameraOptions>(cameraOptionsPtr);
+    mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
     
     mbgl::AnimationOptions animationOptions;
     animationOptions.duration = mbgl::Duration(std::chrono::milliseconds(duration));
     
-    map->easeTo(*cameraOptions, animationOptions);
+    map->easeTo(options, animationOptions);
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeFlyTo
-  (JNIEnv* env, jclass, jlong ptr, jlong cameraOptionsPtr, jint duration) {
+  (JNIEnv* env, jclass, jlong ptr, jobject cameraOptions, jint duration) {
     auto* map = fromJavaPointer<mbgl::Map>(ptr);
-    auto* cameraOptions = fromJavaPointer<mbgl::CameraOptions>(cameraOptionsPtr);
+    mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
     
     mbgl::AnimationOptions animationOptions;
     animationOptions.duration = mbgl::Duration(std::chrono::milliseconds(duration));
     
-    map->flyTo(*cameraOptions, animationOptions);
+    map->flyTo(options, animationOptions);
 }
 
-JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
+JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetCameraOptions
   (JNIEnv* env, jclass, jlong ptr) {
     auto* map = fromJavaPointer<mbgl::Map>(ptr);
     auto cameraOptions = map->getCameraOptions();
-    return toJavaPointer(new mbgl::CameraOptions(cameraOptions));
+    return maplibre_jni::CameraOptionsConversions::create(env, cameraOptions);
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetSize

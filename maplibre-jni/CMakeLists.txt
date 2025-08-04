@@ -44,7 +44,7 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/conversions/jni_size_conversions.cpp
     src/main/cpp/conversions/jni_screencoordinate_conversions.cpp
     src/main/cpp/conversions/jni_edgeinsets_conversions.cpp
-    src/main/cpp/jni_cameraoptions.cpp
+    src/main/cpp/conversions/jni_cameraoptions_conversions.cpp
     src/main/cpp/jni_mapoptions.cpp
     src/main/cpp/jni_resourceoptions.cpp
     src/main/cpp/jni_clientoptions.cpp
