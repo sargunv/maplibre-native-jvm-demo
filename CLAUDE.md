@@ -25,7 +25,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ✅ **MapLibre initialization**: All components initialize successfully
 - ✅ **Map observer callbacks**: All events fire correctly (style loaded, map loaded, etc.)
 - ✅ **Map rendering**: Map renders correctly with proper colors and no initial render bug
-- ✅ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
+- ✅ **User interaction**: Mouse/keyboard controls for pan/zoom/rotate
 
 ### What Isn't Yet Implemented
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
@@ -57,7 +57,6 @@ Uses CMake to build MapLibre from source with custom JNI code:
 ## Next Steps & Future Improvements
 
 ### Potential Enhancements
-1. **User Interaction**: Add mouse/keyboard controls for pan, zoom, rotate
 2. **Performance Optimization**: Profile and optimize render loop
 3. **Memory Management**: Fix cleanup issues in dispose()
 4. **Additional Features**:
@@ -67,7 +66,6 @@ Uses CMake to build MapLibre from source with custom JNI code:
 
 ### Immediate Issues to Fix
 1. **Linux/Windows support**: Implement Vulkan backend for cross-platform support
-2. **No user interaction**: Mouse/keyboard controls not implemented
 
 #### Native Metal Integration (2025-08-03)
 - **Native Metal Backend**: Direct Metal rendering on macOS
