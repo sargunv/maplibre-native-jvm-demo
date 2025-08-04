@@ -1,4 +1,4 @@
-#include "generated/kotlin/main/com_maplibre_jni_ClientOptions.h"
+#include "com_maplibre_jni_ClientOptions.h"
 #include "mbgl/util/client_options.hpp"
 #include "jni_helpers.hpp"
 

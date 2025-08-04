@@ -26,7 +26,7 @@ application {
 
 // Configure ktjni plugin
 ktjni {
-    outputDir = file("maplibre-jni/src/main/cpp/generated")
+    outputDir = project(":maplibre-jni").layout.buildDirectory.dir("generated/jni-headers").get().asFile
 }
 
 // Copy the built library to resources

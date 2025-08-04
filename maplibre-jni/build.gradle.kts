@@ -5,11 +5,12 @@ tasks.register<Exec>("configureCMake") {
     dependsOn(":generateKotlinMainJniHeaders")
     
     val buildDir = layout.buildDirectory.dir("cmake").get().asFile
+    val jniHeadersDir = layout.buildDirectory.dir("generated/jni-headers/kotlin/main").get().asFile
     
     // Inputs
     inputs.file("CMakeLists.txt")
     inputs.dir("src/main/cpp")
-    // Headers are already in src/main/cpp/generated, included via inputs.dir("src/main/cpp")
+    inputs.dir(jniHeadersDir)
     inputs.dir("../vendor/maplibre-native")
     
     // Outputs
@@ -32,6 +33,7 @@ tasks.register<Exec>("configureCMake") {
         "-G", generator,
         "-DCMAKE_BUILD_TYPE=Release",
         "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "-DJNI_HEADERS_DIR=${jniHeadersDir.absolutePath}",
         projectDir.absolutePath
     )
 }
@@ -44,7 +46,7 @@ tasks.register<Exec>("buildNative") {
     
     // Inputs
     inputs.files(fileTree("src/main/cpp"))
-    // Headers are included via src/main/cpp input above
+    inputs.dir(layout.buildDirectory.dir("generated/jni-headers/kotlin/main"))
     inputs.file(buildDir.resolve("CMakeCache.txt"))
     
     // Outputs

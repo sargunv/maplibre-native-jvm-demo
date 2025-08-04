@@ -1,4 +1,4 @@
-#include "generated/kotlin/main/com_maplibre_jni_MapOptions.h"
+#include "com_maplibre_jni_MapOptions.h"
 #include "mbgl/map/map_options.hpp"
 #include "mbgl/map/mode.hpp"
 #include "mbgl/util/geo.hpp"

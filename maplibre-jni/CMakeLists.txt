@@ -5,6 +5,9 @@ project(maplibre-jni)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Path to generated JNI headers
+set(JNI_HEADERS_DIR "" CACHE PATH "Path to generated JNI headers")
+
 # Enable Objective-C++ on macOS
 if(APPLE)
     enable_language(OBJCXX)
@@ -74,6 +77,7 @@ add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
 # Include directories
 target_include_directories(maplibre-jni PRIVATE
     ${JNI_INCLUDE_DIRS}
+    ${JNI_HEADERS_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/default/include

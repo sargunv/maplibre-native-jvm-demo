@@ -1,4 +1,4 @@
-#include "generated/kotlin/main/com_maplibre_jni_MaplibreMap.h"
+#include "com_maplibre_jni_MaplibreMap.h"
 #include "jni_helpers.hpp"
 #include "jni_awt_canvas_renderer.hpp"
 #include "jni_map_observer.hpp"

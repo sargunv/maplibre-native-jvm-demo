@@ -1,4 +1,4 @@
-#include "generated/kotlin/main/com_maplibre_jni_NativeMapObserver.h"
+#include "com_maplibre_jni_NativeMapObserver.h"
 #include "jni_map_observer.hpp"
 #include "jni_helpers.hpp"
 
