@@ -9,19 +9,16 @@ import java.lang.ref.Cleaner
  */
 class MaplibreMap(
     renderer: AwtCanvasRenderer,
-    mapObserver: MapObserver,
+    private val mapObserver: MapObserver,  // Keep reference to prevent GC
     mapOptions: MapOptions,
     resourceOptions: ResourceOptions,
     clientOptions: ClientOptions = ClientOptions()
 ) : AutoCloseable {
     
-    // Keep a reference to prevent garbage collection while the map exists
-    private val nativeObserver: NativeMapObserver = NativeMapObserver(mapObserver)
-    
     // Create the map with all the components
     private val nativePtr: Long = nativeNew(
         renderer.getRendererFrontend(),
-        nativeObserver.nativePtr,
+        mapObserver,
         mapOptions,
         resourceOptions,
         clientOptions
@@ -38,7 +35,6 @@ class MaplibreMap(
     
     override fun close() {
         cleanable.clean()
-        nativeObserver.close()
     }
     /**
      * Triggers a repaint of the map.
@@ -119,7 +115,7 @@ class MaplibreMap(
         @JvmStatic
         private external fun nativeNew(
             rendererFrontendPtr: Long,
-            mapObserverPtr: Long,
+            mapObserver: MapObserver,
             mapOptions: MapOptions,
             resourceOptions: ResourceOptions,
             clientOptions: ClientOptions

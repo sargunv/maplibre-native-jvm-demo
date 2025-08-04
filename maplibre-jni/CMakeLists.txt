@@ -53,7 +53,6 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/conversions/jni_tileserveroptions_conversions.cpp
     src/main/cpp/conversions/jni_resourceoptions_conversions.cpp
     src/main/cpp/jni_map_observer.cpp
-    src/main/cpp/jni_native_map_observer.cpp
     src/main/cpp/jni_maplibre_map.cpp
     # New unified renderer architecture
     src/main/cpp/jni_awt_canvas_renderer.cpp
