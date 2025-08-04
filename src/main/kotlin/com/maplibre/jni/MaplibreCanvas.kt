@@ -35,15 +35,11 @@ class MaplibreCanvas(
 
   private fun initializeMap() {
     try {
-      val pixelRatio =
-        graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
-
       // Should match the canvas size
       val adjustedMapOptions = mapOptions.copy(
-        pixelRatio = pixelRatio,
         size = Size(
-          width = (width * pixelRatio).toInt(),
-          height = (height * pixelRatio).toInt()
+          width = width,
+          height = height
         )
       )
 

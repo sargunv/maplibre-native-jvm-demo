@@ -29,7 +29,6 @@ public:
         jobject canvas,
         int width,
         int height,
-        float pixelRatio,
         const std::optional<std::string>& localFontFamily = std::nullopt
     );
     

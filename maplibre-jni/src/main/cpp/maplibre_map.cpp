@@ -34,11 +34,11 @@ struct MapWrapper {
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeNew
-  (JNIEnv* env, jclass, jobject canvasObj, jint width, jint height, jfloat pixelRatio, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj) {
+  (JNIEnv* env, jclass, jobject canvasObj, jint width, jint height, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj) {
     try {
         // Create the renderer from the Canvas
         auto renderer = maplibre_jni::AwtCanvasRenderer::create(
-            env, canvasObj, width, height, pixelRatio, std::nullopt
+            env, canvasObj, width, height, std::nullopt
         );
 
         // Create the JniMapObserver from the Java MapObserver object

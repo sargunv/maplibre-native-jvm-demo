@@ -11,7 +11,7 @@ data class MapOptions(
     val crossSourceCollisions: Boolean = true,
     val northOrientation: NorthOrientation = NorthOrientation.UPWARDS,
     val size: Size = Size(64, 64),
-    val pixelRatio: Float = 1.0f
+    val pixelRatio: Float = PlatformUtils.getSystemPixelRatio()
 ) {
     init {
         require(pixelRatio > 0) { "pixelRatio must be positive" }

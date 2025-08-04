@@ -16,13 +16,10 @@ class MaplibreMap(
     private val clientOptions: ClientOptions,
 ) : NativeObject(
   new = {
-    val pixelRatio = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat()
-      ?: 1.0f
     nativeNew(
       canvas = canvas,
-      width = (canvas.width * pixelRatio).toInt(),
-      height = (canvas.height * pixelRatio).toInt(),
-      pixelRatio = pixelRatio,
+      width = canvas.width,
+      height = canvas.height,
       mapObserver = mapObserver,
       mapOptions = mapOptions,
       resourceOptions = resourceOptions,
@@ -35,11 +32,7 @@ class MaplibreMap(
   init {
     canvas.addComponentListener(object : ComponentAdapter() {
       override fun componentResized(e: ComponentEvent) {
-        val scale =
-          canvas.graphicsConfiguration!!.defaultTransform.scaleX.toFloat()
-        val pixelWidth = (canvas.width * scale).toInt()
-        val pixelHeight = (canvas.height * scale).toInt()
-        this@MaplibreMap.setSize(Size(pixelWidth, pixelHeight))
+        this@MaplibreMap.setSize(Size(canvas.width, canvas.height))
       }
     })
   }
@@ -186,7 +179,6 @@ class MaplibreMap(
             canvas: Canvas,
             width: Int,
             height: Int,
-            pixelRatio: Float,
             mapObserver: MapObserver,
             mapOptions: MapOptions,
             resourceOptions: ResourceOptions,

@@ -15,7 +15,6 @@ fun main() {
         viewportMode = ViewportMode.DEFAULT,
         constrainMode = ConstrainMode.HEIGHT_ONLY,
         crossSourceCollisions = true,
-        pixelRatio = 1.0f,
         size = Size(800, 600)
       ),
       resourceOptions = ResourceOptions(

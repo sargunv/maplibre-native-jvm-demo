@@ -27,7 +27,6 @@ public:
          jobject canvas, 
          int width, 
          int height,
-         float pixelRatio,
          const std::optional<std::string>& localFontFamily)
         : runLoop(std::make_unique<mbgl::util::RunLoop>(mbgl::util::RunLoop::Type::New)),
           jvm(nullptr),
@@ -44,9 +43,10 @@ public:
         backend = createPlatformBackend(env, canvas, width, height, mbgl::gfx::ContextMode::Unique);
         
         // Create the renderer with backend
+        // Use 1.0 for renderer pixel ratio - MapLibre will handle scaling internally based on MapOptions
         renderer = std::make_unique<mbgl::Renderer>(
             *backend,
-            pixelRatio,
+            1.0f,
             localFontFamily
         );
         
@@ -198,11 +198,10 @@ std::unique_ptr<AwtCanvasRenderer> AwtCanvasRenderer::create(
     jobject canvas,
     int width,
     int height,
-    float pixelRatio,
     const std::optional<std::string>& localFontFamily) {
     
     auto renderer = std::unique_ptr<AwtCanvasRenderer>(new AwtCanvasRenderer());
-    renderer->impl = std::make_unique<Impl>(env, canvas, width, height, pixelRatio, localFontFamily);
+    renderer->impl = std::make_unique<Impl>(env, canvas, width, height, localFontFamily);
     return renderer;
 }
 
@@ -241,10 +240,10 @@ extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_AwtCanvasRenderer_nativeCreate(
     JNIEnv* env, jclass,
-    jobject canvas, jint width, jint height, jfloat pixelRatio) {
+    jobject canvas, jint width, jint height) {
     try {
         auto renderer = maplibre_jni::AwtCanvasRenderer::create(
-            env, canvas, width, height, pixelRatio, std::nullopt
+            env, canvas, width, height, std::nullopt
         );
         return toJavaPointer(renderer.release());
     } catch (const std::exception& e) {
