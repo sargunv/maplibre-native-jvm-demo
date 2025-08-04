@@ -5,6 +5,7 @@
 #include "conversions/jni_size_conversions.hpp"
 #include "conversions/jni_cameraoptions_conversions.hpp"
 #include "conversions/jni_mapoptions_conversions.hpp"
+#include "conversions/jni_clientoptions_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -19,22 +20,24 @@
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeNew
-  (JNIEnv* env, jclass, jlong frontendPtr, jlong observerPtr, jobject mapOptionsObj, jlong resourceOptionsPtr, jlong clientOptionsPtr) {
+  (JNIEnv* env, jclass, jlong frontendPtr, jlong observerPtr, jobject mapOptionsObj, jlong resourceOptionsPtr, jobject clientOptionsObj) {
     try {
         auto* frontend = fromJavaPointer<maplibre_jni::AwtCanvasRenderer>(frontendPtr);
         auto* observer = fromJavaPointer<maplibre_jni::JniMapObserver>(observerPtr);
         auto* resourceOptions = fromJavaPointer<mbgl::ResourceOptions>(resourceOptionsPtr);
-        auto* clientOptions = fromJavaPointer<mbgl::ClientOptions>(clientOptionsPtr);
         
         // Extract MapOptions from Java object
         mbgl::MapOptions mapOptions = maplibre_jni::MapOptionsConversions::extract(env, mapOptionsObj);
+        
+        // Extract ClientOptions from Java object
+        mbgl::ClientOptions clientOptions = maplibre_jni::ClientOptionsConversions::extract(env, clientOptionsObj);
         
         auto* map = new mbgl::Map(
             *frontend,
             *observer,
             mapOptions,
             *resourceOptions,
-            *clientOptions
+            clientOptions
         );
         
         return toJavaPointer(map);
@@ -115,27 +118,29 @@ JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetSize
 }
 
 JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeActivateFileSources
-  (JNIEnv* env, jclass, jlong resourceOptionsPtr, jlong clientOptionsPtr) {
+  (JNIEnv* env, jclass, jlong resourceOptionsPtr, jobject clientOptionsObj) {
     try {
         auto* resourceOptions = fromJavaPointer<mbgl::ResourceOptions>(resourceOptionsPtr);
-        auto* clientOptions = fromJavaPointer<mbgl::ClientOptions>(clientOptionsPtr);
+        
+        // Extract ClientOptions from Java object
+        mbgl::ClientOptions clientOptions = maplibre_jni::ClientOptionsConversions::extract(env, clientOptionsObj);
         
         // Get network file source for HTTP downloads
         std::shared_ptr<mbgl::FileSource> networkFileSource = 
             mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::Network, *resourceOptions, *clientOptions);
+                mbgl::FileSourceType::Network, *resourceOptions, clientOptions);
         
         
         // Get resource loader for request management
         std::shared_ptr<mbgl::FileSource> resourceLoader = 
             mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::ResourceLoader, *resourceOptions, *clientOptions);
+                mbgl::FileSourceType::ResourceLoader, *resourceOptions, clientOptions);
         
         
         // Get database file source for caching
         std::shared_ptr<mbgl::FileSource> databaseFileSource = 
             mbgl::FileSourceManager::get()->getFileSource(
-                mbgl::FileSourceType::Database, *resourceOptions, *clientOptions);
+                mbgl::FileSourceType::Database, *resourceOptions, clientOptions);
         
         
     } catch (const std::exception& e) {

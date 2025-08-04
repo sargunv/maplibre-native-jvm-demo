@@ -24,7 +24,7 @@ class MaplibreMap(
         nativeObserver.nativePtr,
         mapOptions,
         resourceOptions.nativePtr,
-        clientOptions.nativePtr
+        clientOptions
     )
     
     // Store resource options for file source activation (will be called after construction)
@@ -110,7 +110,7 @@ class MaplibreMap(
      * This must be called before loading remote styles to enable network requests.
      */
     fun activateFileSources() {
-        nativeActivateFileSources(storedResourceOptions.nativePtr, storedClientOptions.nativePtr)
+        nativeActivateFileSources(storedResourceOptions.nativePtr, storedClientOptions)
     }
     
     companion object {
@@ -122,7 +122,7 @@ class MaplibreMap(
             mapObserverPtr: Long,
             mapOptions: MapOptions,
             resourceOptionsPtr: Long,
-            clientOptionsPtr: Long
+            clientOptions: ClientOptions
         ): Long
         
         @JvmStatic
@@ -153,6 +153,6 @@ class MaplibreMap(
         private external fun nativeSetSize(ptr: Long, size: Size)
         
         @JvmStatic
-        private external fun nativeActivateFileSources(resourceOptionsPtr: Long, clientOptionsPtr: Long)
+        private external fun nativeActivateFileSources(resourceOptionsPtr: Long, clientOptions: ClientOptions)
     }
 }
