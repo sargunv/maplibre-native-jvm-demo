@@ -7,7 +7,7 @@ This project creates JVM bindings for MapLibre Native using direct C++ JNI, enab
 - **MapLibre Native**: C++ map rendering engine
 - **C++ JNI Layer**: Direct JNI bindings to MapLibre types
 - **Kotlin API**: High-level API for Java/Kotlin developers with automatic memory management
-- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux
+- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux/Windows (in development)
 
 ## Build System
 Uses CMake to build MapLibre from source with custom JNI code:
@@ -19,13 +19,12 @@ Uses CMake to build MapLibre from source with custom JNI code:
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
-- ✅ **OpenGL ES backend on Linux**: Using EGL for context management
 - ✅ **Cross-platform JAWT integration**: Unified JAWTRendererBackend with platform-specific implementations
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
 - ✅ **Map observer callbacks**: All events fire correctly (style loaded, map loaded, etc.)
-- ✅ **Static rendering**: Map renders correctly after window resize
+- ✅ **Map rendering**: Map renders correctly with proper colors and no initial render bug
 
 ### What Isn't Yet Implemented
 - ❌ **User interaction**: No mouse/keyboard controls for pan/zoom/rotate
@@ -33,9 +32,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Runtime styling**: Cannot modify or change styles at runtime
 - ❌ **Offline maps**: No support for offline tiles or caching yet
 - ❌ **Error handling**: No robust error handling or logging implemented
-
-### Known Rendering Issues
-- ⚠️ **Initial render**: Map doesn't render until first window resize
+- ❌ **Linux/Windows support**: Vulkan backend is stubbed but not yet implemented
 
 ### Architecture Status
 ```
@@ -70,34 +67,28 @@ Uses CMake to build MapLibre from source with custom JNI code:
    - Style switching at runtime
 
 ### Immediate Issues to Fix
-1. **Initial render bug**: Map doesn't display until window is resized
-2. **Pixel ratio bug**: Initial scale factor not applied correctly
-3. **Render loop inefficiency**: Currently rendering at 60fps continuously, unclear if necessary
-4. **Memory cleanup**: Disabled to avoid crashes (needs investigation)
-5. **No user interaction**: Mouse/keyboard controls not implemented
+1. **Linux/Windows support**: Implement Vulkan backend for cross-platform support
+2. **Render loop inefficiency**: Currently rendering at 60fps continuously, unclear if necessary
+3. **Memory cleanup**: Disabled to avoid crashes (needs investigation)
+4. **No user interaction**: Mouse/keyboard controls not implemented
 
 ## Technical Implementation Details
 
 ### Critical Implementation Discoveries
 
-#### OpenGL ES Compatibility
-- **Context Type**: MapLibre expects OpenGL ES, not desktop OpenGL
-- **Context Mode**: `ContextMode::Unique` required for proper state management
-- **Framebuffer**: Explicit RGBA8/stencil8/depth16 configuration needed
-- **Render Order**: Let MapLibre handle clearing, don't override with manual clears
 
 #### Native Metal Integration (2025-08-03)
-- **Native Metal Backend**: Replaced ANGLE with direct Metal rendering on macOS
-- **Platform-specific Backends**: Metal on macOS, OpenGL ES via EGL on Linux/Windows
+- **Native Metal Backend**: Direct Metal rendering on macOS
+- **Platform-specific Backends**: Metal on macOS, Vulkan on Linux/Windows (planned)
 - **JAWT Version 9**: Required for modern Java (version constant: 0x00090000)
-- **CALayer Assignment**: Direct assignment of Metal layer to JAWT surface layers
+- **CALayer Configuration**: Must set frame, opaque, contentsScale, and pixelFormat properties
 - **GLFW Pattern**: Metal backend mimics GLFW implementation exactly for consistency
 
 #### Rendering Issues and Fixes
-- **Remove canvas.repaint()**: AWT's repaint was causing buffer clearing and flickering
+- **Initial render fix**: Setting Metal layer frame resolves the initial render bug
+- **Color accuracy**: Use `MTLPixelFormatBGRA8Unorm` instead of sRGB variant
 - **Single render path**: Only render in timer loop, not in observer callbacks
-- **Initial render bug**: Map doesn't display until window resize (needs investigation)
-- **Scale factor bug**: Pixel ratio not applied correctly on initial render
+- **Remove canvas.repaint()**: AWT's repaint was causing buffer clearing and flickering
 
 ### JNI Implementation Pattern
 ```cpp
@@ -131,7 +122,7 @@ open class NativeObject internal constructor(
 - CMake 3.21+
 - Platform-specific:
   - **macOS**: Metal framework (included with Xcode)
-  - **Linux**: Mesa EGL/OpenGL ES development packages
+  - **Linux**: Vulkan TODO
 
 ## Project Structure
 ```
@@ -173,14 +164,12 @@ src/main/kotlin/Main.kt         # Demo application
 ### Decision
 Implemented native graphics backends for each platform without any translation layers:
 - **macOS**: Direct Metal backend
-- **Linux**: Direct OpenGL ES via system EGL
-- **Windows**: Not yet supported (future work)
+- **Linux/Windows**: Vulkan backend (stub)
 
 ### Implementation Details
-- **No ANGLE**: Removed all ANGLE dependencies, using native APIs directly
-- **No JOGL**: Removed JOGL dependency, using JAWT directly for window integration
-- **Platform-specific backends**: Metal on macOS, OpenGL ES on Linux
-- **JAWT Integration**: Direct native window handle extraction for supported platforms
+- **No external graphics libraries**: No ANGLE, JOGL, or EGL dependencies
+- **Native APIs only**: Direct Metal on macOS, Vulkan on Linux/Windows (planned)
+- **JAWT Integration**: Direct native window handle extraction for all platforms
 - **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
 
 ### Benefits Achieved
@@ -189,11 +178,6 @@ Implemented native graphics backends for each platform without any translation l
 - Direct API access for platform-specific optimizations
 - Clean, lean MVP architecture
 - Better alignment with MapLibre's native platform support
-
-### Current Known Issues
-1. **Initial render bug**: Map doesn't display until window is resized
-2. **Pixel ratio bug**: Scale factor not applied correctly on initial render
-3. **Render strategy**: Currently rendering at 60fps continuously (need to investigate on-demand)
 
 ## Metal Backend Implementation Notes (2025-08-03)
 

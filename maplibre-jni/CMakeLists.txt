@@ -23,10 +23,10 @@ if(APPLE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
 else()
-    # Use OpenGL ES backend on Linux
+    # Use Vulkan backend on Linux/Windows
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
-    set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
 endif()
 
 set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
@@ -65,9 +65,9 @@ if(APPLE)
         src/main/cpp/jni_metal_backend.mm
     )
 else()
-    # OpenGL ES backend for Linux
+    # Vulkan backend for Linux/Windows (stub for now)
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/jni_gl_backend.cpp
+        src/main/cpp/jni_vulkan_backend.cpp
     )
 endif()
 
@@ -126,26 +126,8 @@ endif()
 
 # Platform-specific graphics library linking
 if(NOT APPLE)
-    # Linux: Link against EGL/OpenGL ES libraries
-    find_package(PkgConfig)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(EGL egl)
-        pkg_check_modules(GLES2 glesv2)
-    endif()
-    
-    if(EGL_FOUND AND GLES2_FOUND)
-        target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARIES} ${GLES2_LIBRARIES})
-        target_include_directories(maplibre-jni PRIVATE ${EGL_INCLUDE_DIRS} ${GLES2_INCLUDE_DIRS})
-    else()
-        # Fallback to searching for libraries manually
-        find_library(EGL_LIBRARY EGL)
-        find_library(GLES2_LIBRARY GLESv2)
-        if(EGL_LIBRARY AND GLES2_LIBRARY)
-            target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY} ${GLES2_LIBRARY})
-        else()
-            message(FATAL_ERROR "Could not find EGL and GLESv2 libraries. Install Mesa development packages.")
-        endif()
-    endif()
+    # Linux/Windows: Vulkan support (MapLibre Native will handle Vulkan linking)
+    # No additional linking needed here as Vulkan is handled by MapLibre Native
 endif()
 
 # Set output directory
