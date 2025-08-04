@@ -27,7 +27,7 @@ class DemoObserver : MapObserver {
   }
 
   override fun onStyleImageMissing(imageId: String) {
-    println("⚠️ Style image missing: $imageId")
+    println("Style image missing: $imageId")
   }
 
   override fun onWillStartRenderingFrame() {

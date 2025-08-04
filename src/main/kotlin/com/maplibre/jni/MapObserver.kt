@@ -9,42 +9,42 @@ interface MapObserver {
         IMMEDIATE,
         ANIMATED
     }
-    
+
     enum class RenderMode {
         PARTIAL,
         FULL
     }
-    
+
     data class RenderFrameStatus(
         val mode: RenderMode,
         val needsRepaint: Boolean,
         val placementChanged: Boolean,
         // TODO: Add renderingStats when we wrap that type
     )
-    
+
     // Camera events
     fun onCameraWillChange(mode: CameraChangeMode) {}
     fun onCameraIsChanging() {}
     fun onCameraDidChange(mode: CameraChangeMode) {}
-    
+
     // Map loading events
     fun onWillStartLoadingMap() {}
     fun onDidFinishLoadingMap() {}
     fun onDidFailLoadingMap(error: MapLoadError, message: String) {}
-    
+
     // Rendering events - most important for MVP
     fun onWillStartRenderingFrame() {}
     fun onDidFinishRenderingFrame(status: RenderFrameStatus) {}
     fun onWillStartRenderingMap() {}
     fun onDidFinishRenderingMap(mode: RenderMode) {}
-    
+
     // Style events
     fun onDidFinishLoadingStyle() {}
     fun onStyleImageMissing(imageId: String) {}
-    
+
     // Idle state
     fun onDidBecomeIdle() {}
-    
+
     // TODO: Add these callbacks when we have the necessary types:
     // - onSourceChanged(source: Source)
     // - onCanRemoveUnusedStyleImage(imageId: String): Boolean
@@ -53,11 +53,4 @@ interface MapObserver {
     // - Glyph loading callbacks
     // - Tile loading callbacks
     // - Sprite loading callbacks
-}
-
-enum class MapLoadError {
-    STYLE_PARSE_ERROR,
-    STYLE_LOAD_ERROR,
-    NOT_FOUND_ERROR,
-    UNKNOWN_ERROR
 }

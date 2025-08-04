@@ -16,7 +16,7 @@ class MaplibreCanvas(
   private val resourceOptions: ResourceOptions,
   private val clientOptions: ClientOptions,
   private val frameRate: Int = 60,
-  private val onMapReady: ((MaplibreMap) -> Unit) = {}
+  private val onMapReady: ((MaplibreMap, MaplibreCanvas) -> Unit) = { _, _ -> }
 ) : Canvas() {
 
   private var map: MaplibreMap? = null
@@ -57,7 +57,7 @@ class MaplibreCanvas(
 
       startRenderLoop()
 
-      onMapReady(map)
+      onMapReady(map, this)
     } catch (e: Exception) {
       println("Failed to initialize MapLibre: ${e.message}")
       e.printStackTrace()

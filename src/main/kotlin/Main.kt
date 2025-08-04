@@ -25,7 +25,7 @@ fun main() {
         version = "0.0.0",
       ),
       frameRate = 60,
-      onMapReady = { map ->
+      onMapReady = { map, canvas ->
         map.loadStyleURL("https://tiles.openfreemap.org/styles/bright")
         map.flyTo(
           CameraOptions(
@@ -35,6 +35,9 @@ fun main() {
             pitch = 0.0
           )
         )
+
+        // Enable user interactions
+        MapInteractionHandler(canvas, map).enable()
       }
     )
 
