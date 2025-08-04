@@ -4,14 +4,13 @@
 
 #include <mbgl/vulkan/renderable_resource.hpp>
 #include <mbgl/vulkan/renderer_backend.hpp>
-#include <mbgl/gfx/renderer_backend.hpp>
 #include <mbgl/util/size.hpp>
 #include <jni.h>
 
 namespace maplibre_jni {
 
 class VulkanBackend final : public mbgl::vulkan::RendererBackend,
-                           public mbgl::gfx::Renderable {
+                           public mbgl::vulkan::Renderable {
 public:
     VulkanBackend(JNIEnv* env, jobject canvas, int width, int height);
     ~VulkanBackend() override;
@@ -28,8 +27,8 @@ public:
 
 protected:
     // mbgl::vulkan::RendererBackend overrides
-    void activate() override;
-    void deactivate() override;
+    void activate() override {}
+    void deactivate() override {}
     std::vector<const char*> getInstanceExtensions() override;
 
 private:

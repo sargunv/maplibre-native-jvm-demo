@@ -14,71 +14,72 @@
 #include <vulkan/vulkan_xlib.h>
 #endif
 
+// VulkanRenderableResource must be in global namespace to match GLFW pattern
+class VulkanRenderableResource final : public mbgl::vulkan::SurfaceRenderableResource
+    {
+public:
+    explicit VulkanRenderableResource(maplibre_jni::VulkanBackend &backend_)
+        : mbgl::vulkan::SurfaceRenderableResource(backend_),
+          vulkanBackend(backend_) {}
+
+    void createPlatformSurface() override
+    {
+#ifdef __linux__
+        auto &backendImpl = static_cast<maplibre_jni::VulkanBackend &>(backend);
+
+        if (!backendImpl.getX11Display() || !backendImpl.getX11Window())
+        {
+            throw std::runtime_error("X11 display or window not available");
+        }
+
+        VkXlibSurfaceCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+        createInfo.dpy = static_cast<Display *>(backendImpl.getX11Display());
+        createInfo.window = static_cast<Window>(backendImpl.getX11Window());
+
+        VkSurfaceKHR surface_;
+        VkResult result = vkCreateXlibSurfaceKHR(
+            backendImpl.getInstance().get(),
+            &createInfo,
+            nullptr,
+            &surface_);
+
+        if (result != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create X11 surface");
+        }
+
+        surface = vk::UniqueSurfaceKHR(
+            surface_,
+            vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic>(
+                backendImpl.getInstance().get(), nullptr, backendImpl.getDispatcher()));
+
+        mbgl::Log::Info(mbgl::Event::General, "Vulkan X11 surface created successfully");
+#else
+        throw std::runtime_error("Platform surface creation not implemented for this platform");
+#endif
+    }
+
+    void bind() override
+    {
+        // Stub - binding is handled by Vulkan command buffers
+    }
+
+    std::vector<const char *> getDeviceExtensions() override
+    {
+        return {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    }
+
+private:
+    maplibre_jni::VulkanBackend &vulkanBackend;
+};
+
 namespace maplibre_jni
 {
 
-    class VulkanRenderableResource final : public mbgl::vulkan::SurfaceRenderableResource
-    {
-    public:
-        explicit VulkanRenderableResource(VulkanBackend &backend_)
-            : mbgl::vulkan::SurfaceRenderableResource(backend_),
-              vulkanBackend(backend_) {}
-
-        void createPlatformSurface() override
-        {
-#ifdef __linux__
-            auto &backendImpl = static_cast<VulkanBackend &>(backend);
-
-            if (!backendImpl.getX11Display() || !backendImpl.getX11Window())
-            {
-                throw std::runtime_error("X11 display or window not available");
-            }
-
-            VkXlibSurfaceCreateInfoKHR createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-            createInfo.dpy = static_cast<Display *>(backendImpl.getX11Display());
-            createInfo.window = static_cast<Window>(backendImpl.getX11Window());
-
-            VkSurfaceKHR surface_;
-            VkResult result = vkCreateXlibSurfaceKHR(
-                backendImpl.getInstance().get(),
-                &createInfo,
-                nullptr,
-                &surface_);
-
-            if (result != VK_SUCCESS)
-            {
-                throw std::runtime_error("Failed to create X11 surface");
-            }
-
-            surface = vk::UniqueSurfaceKHR(
-                surface_,
-                vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic>(
-                    backendImpl.getInstance().get(), nullptr, backendImpl.getDispatcher()));
-
-            mbgl::Log::Info(mbgl::Event::General, "Vulkan X11 surface created successfully");
-#else
-            throw std::runtime_error("Platform surface creation not implemented for this platform");
-#endif
-        }
-
-        void bind() override
-        {
-            // Stub - binding is handled by Vulkan command buffers
-        }
-
-        std::vector<const char *> getDeviceExtensions() override
-        {
-            return {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-        }
-
-    private:
-        VulkanBackend &vulkanBackend;
-    };
-
     VulkanBackend::VulkanBackend(JNIEnv *env, jobject canvas, int width, int height)
         : mbgl::vulkan::RendererBackend(mbgl::gfx::ContextMode::Unique),
-          mbgl::gfx::Renderable(
+          mbgl::vulkan::Renderable(
               mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
               std::make_unique<VulkanRenderableResource>(*this)),
           size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)})
@@ -92,8 +93,12 @@ namespace maplibre_jni
         // Extract native window handles from JAWT
         setupVulkanSurface(env, canvas);
 
+        mbgl::Log::Info(mbgl::Event::General, "Starting Vulkan initialization");
+        
         // Initialize Vulkan
         init();
+        
+        mbgl::Log::Info(mbgl::Event::General, "Vulkan initialization complete");
     }
 
     VulkanBackend::~VulkanBackend()
@@ -159,9 +164,15 @@ namespace maplibre_jni
     {
         auto extensions = mbgl::vulkan::RendererBackend::getInstanceExtensions();
 
+        // Add surface extensions
+        extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+        
 #ifdef __linux__
         // Add X11 surface extension
-        extensions.push_back("VK_KHR_xlib_surface");
+        extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#elif _WIN32
+        // Add Windows surface extension
+        extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 
         return extensions;
