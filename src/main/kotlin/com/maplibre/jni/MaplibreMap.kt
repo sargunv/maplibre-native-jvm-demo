@@ -22,7 +22,7 @@ class MaplibreMap(
     private val nativePtr: Long = nativeNew(
         renderer.getRendererFrontend(),
         nativeObserver.nativePtr,
-        mapOptions.nativePtr,
+        mapOptions,
         resourceOptions.nativePtr,
         clientOptions.nativePtr
     )
@@ -120,7 +120,7 @@ class MaplibreMap(
         private external fun nativeNew(
             rendererFrontendPtr: Long,
             mapObserverPtr: Long,
-            mapOptionsPtr: Long,
+            mapOptions: MapOptions,
             resourceOptionsPtr: Long,
             clientOptionsPtr: Long
         ): Long

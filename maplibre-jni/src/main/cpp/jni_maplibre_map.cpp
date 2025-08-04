@@ -4,6 +4,7 @@
 #include "jni_map_observer.hpp"
 #include "conversions/jni_size_conversions.hpp"
 #include "conversions/jni_cameraoptions_conversions.hpp"
+#include "conversions/jni_mapoptions_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
 #include <mbgl/storage/resource_options.hpp>
@@ -18,18 +19,20 @@
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_maplibre_jni_MaplibreMap_nativeNew
-  (JNIEnv* env, jclass, jlong frontendPtr, jlong observerPtr, jlong mapOptionsPtr, jlong resourceOptionsPtr, jlong clientOptionsPtr) {
+  (JNIEnv* env, jclass, jlong frontendPtr, jlong observerPtr, jobject mapOptionsObj, jlong resourceOptionsPtr, jlong clientOptionsPtr) {
     try {
         auto* frontend = fromJavaPointer<maplibre_jni::AwtCanvasRenderer>(frontendPtr);
         auto* observer = fromJavaPointer<maplibre_jni::JniMapObserver>(observerPtr);
-        auto* mapOptions = fromJavaPointer<mbgl::MapOptions>(mapOptionsPtr);
         auto* resourceOptions = fromJavaPointer<mbgl::ResourceOptions>(resourceOptionsPtr);
         auto* clientOptions = fromJavaPointer<mbgl::ClientOptions>(clientOptionsPtr);
+        
+        // Extract MapOptions from Java object
+        mbgl::MapOptions mapOptions = maplibre_jni::MapOptionsConversions::extract(env, mapOptionsObj);
         
         auto* map = new mbgl::Map(
             *frontend,
             *observer,
-            *mapOptions,
+            mapOptions,
             *resourceOptions,
             *clientOptions
         );
