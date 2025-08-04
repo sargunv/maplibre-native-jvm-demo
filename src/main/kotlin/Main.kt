@@ -45,7 +45,6 @@ fun main() {
     )
 
     val frame = JFrame("MapLibre Native JVM Demo").apply {
-      // Try using EXIT_ON_CLOSE directly first
       defaultCloseOperation = JFrame.EXIT_ON_CLOSE
       layout = BorderLayout()
       add(canvas, BorderLayout.CENTER)
@@ -55,21 +54,13 @@ fun main() {
       // Add a window listener to force exit
       addWindowListener(object : WindowAdapter() {
         override fun windowClosing(e: WindowEvent) {
-          println("Window closing event triggered")
-          canvas.dispose()
-          // Force exit since the window isn't closing properly
+          this@apply.dispose()
           System.exit(0)
         }
       })
       
       isVisible = true
     }
-    
-    // Also handle Ctrl+C / SIGINT
-    Runtime.getRuntime().addShutdownHook(Thread {
-      canvas.dispose()
-      frame.dispose()
-    })
   }
 }
 
