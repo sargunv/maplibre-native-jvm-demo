@@ -15,7 +15,6 @@ fun main() {
   SwingUtilities.invokeLater {
     // Create a simple Canvas (no OpenGL initialization needed!)
     val canvas = Canvas()
-    canvas.background = Color.BLUE
 
     // MapLibre components
     var map: MaplibreMap? = null
@@ -170,12 +169,11 @@ fun main() {
 
     // Create window
     val frame = JFrame("MapLibre Native JVM Demo")
-    frame.background = Color.RED
 
     // Create render timer - simplified with tick-based approach
     val renderTimer = Timer(16) { // ~60 FPS
       val didRender = renderer?.tick() ?: false
-      
+
       // Update spinner in title to show rendering activity
       if (didRender) {
         frameCount++

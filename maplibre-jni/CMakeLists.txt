@@ -53,7 +53,7 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/jni_maplibre_map.cpp
     # New unified renderer architecture
     src/main/cpp/jni_awt_canvas_renderer.cpp
-    src/main/cpp/jni_awt_platform_factory.cpp
+    src/main/cpp/jni_awt_backend_factory.cpp
 )
 
 # Add platform-specific backend sources

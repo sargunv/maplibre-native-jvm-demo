@@ -1,6 +1,6 @@
 #ifdef __APPLE__
 
-#include <mbgl/mtl/renderer_backend.hpp>
+#include "jni_awt_metal_backend.hpp"
 #include <mbgl/mtl/renderable_resource.hpp>
 #include <mbgl/mtl/mtl_fwd.hpp>
 #include <mbgl/mtl/texture2d.hpp>
@@ -19,44 +19,7 @@
 #include <jni.h>
 
 namespace maplibre_jni {
-
-// Metal backend implementation for AWT Canvas
-class MetalBackend final : public mbgl::mtl::RendererBackend,
-                          public mbgl::gfx::Renderable {
-public:
-    MetalBackend(JNIEnv* env, jobject canvas, int width, int height);
-    ~MetalBackend() override;
-
-    // mbgl::gfx::RendererBackend implementation
-    mbgl::gfx::Renderable& getDefaultRenderable() override;
-
-    // mbgl::mtl::RendererBackend implementation
-    void activate() override {}
-    void deactivate() override {}
-    void updateAssumedState() override {}
-
-    // Size management
-    void setSize(mbgl::Size size);
-    mbgl::Size getSize() const;
-
-private:
-    void setupMetalLayer(JNIEnv* env, jobject canvas);
-    void releaseNativeWindow();
-
-    JNIEnv* getEnv();
-
-    // Size
-    mbgl::Size size;
-
-    // JAWT structures
-    void* jawtDrawingSurface = nullptr;
-    void* jawtDrawingSurfaceInfo = nullptr;
-
-    // JNI references
-    JavaVM* jvm = nullptr;
-    jobject canvasRef = nullptr;
-};
-
+// Implementation follows below
 } // namespace maplibre_jni
 
 namespace mbgl {
@@ -197,6 +160,9 @@ MetalBackend::MetalBackend(JNIEnv* env, jobject canvas, int width, int height)
 
     // Set the frame accounting for the scale factor (convert from pixels to points)
     metalLayer.frame = CGRectMake(0, 0, width / scale, height / scale);
+    
+    // Set the contentsScale to match the screen's backing scale
+    metalLayer.contentsScale = scale;
 
     // Now set up the Metal layer on the AWT Canvas
     setupMetalLayer(env, canvas);
@@ -217,6 +183,13 @@ void MetalBackend::setSize(mbgl::Size newSize) {
     size = newSize;
     auto& resource = getResource<mbgl::MetalRenderableResource>();
     resource.setBackendSize(size);
+    
+    // Update the Metal layer frame to match the new size
+    CAMetalLayer* metalLayer = (__bridge CAMetalLayer*)resource.swapchain.get();
+    NSScreen* screen = [NSScreen mainScreen];
+    CGFloat scale = screen.backingScaleFactor;
+    metalLayer.frame = CGRectMake(0, 0, newSize.width / scale, newSize.height / scale);
+    metalLayer.contentsScale = scale;
 }
 
 mbgl::gfx::Renderable& MetalBackend::getDefaultRenderable() {

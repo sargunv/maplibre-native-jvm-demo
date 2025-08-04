@@ -1,5 +1,6 @@
 #include "jni_awt_canvas_renderer.hpp"
 #include "jni_helpers.hpp"
+#include "jni_awt_backend_factory.hpp"
 
 #include <mbgl/actor/scheduler.hpp>
 #include <mbgl/gfx/backend_scope.hpp>
@@ -16,17 +17,6 @@
 #include <jawt_md.h>
 #include <memory>
 #include <atomic>
-
-// Platform-specific backend factory
-namespace maplibre_jni {
-    std::unique_ptr<mbgl::gfx::RendererBackend> createPlatformBackend(
-        JNIEnv* env, 
-        jobject canvas, 
-        int width, 
-        int height,
-        const mbgl::gfx::ContextMode contextMode
-    );
-}
 
 namespace maplibre_jni {
 
@@ -103,6 +93,9 @@ public:
     }
     
     void updateSize(int width, int height) {
+        // Update the backend size directly - no cast needed!
+        backend->setSize(mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+        
         // Mark as dirty to trigger render
         dirty = true;
     }
@@ -179,7 +172,7 @@ private:
     
     // Core components
     std::unique_ptr<mbgl::util::RunLoop> runLoop;
-    std::unique_ptr<mbgl::gfx::RendererBackend> backend;
+    std::unique_ptr<PlatformBackend> backend;
     std::unique_ptr<mbgl::Renderer> renderer;
     
     // JNI references
