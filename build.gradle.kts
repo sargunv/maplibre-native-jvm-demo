@@ -24,14 +24,13 @@ application {
     mainClass.set("MainKt")
 }
 
-// Configure ktjni plugin
 ktjni {
     outputDir = project(":maplibre-jni").layout.buildDirectory.dir("generated/jni-headers").get().asFile
 }
 
 // Copy the built library to resources
 tasks.register<Copy>("copyNativeLibrary") {
-    dependsOn(":maplibre-jni:buildNative")
+    dependsOn(":maplibre-jni:build")
     
     val os = OperatingSystem.current()
     val libName = when {
@@ -52,7 +51,6 @@ tasks.register<Copy>("copyNativeLibrary") {
     into("$buildDir/generated/resources/main/native/$osFolder")
 }
 
-// Add the generated resources to the source set
 sourceSets {
     main {
         resources {

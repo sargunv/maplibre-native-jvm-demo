@@ -29,28 +29,40 @@ endif()
 
 # Configure MapLibre Native build options based on platform
 if(APPLE)
-    # Use Metal backend on macOS
+    if(APPLE AND USE_VULKAN_BACKEND)
+        # TODO support Vulkan on macOS?
+        message(FATAL_ERROR "USE_VULKAN_BACKEND not yet supported on macOS.")
+    endif()
     set(MLN_WITH_METAL ON CACHE BOOL "" FORCE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-else()
-    # Use OpenGL or Vulkan backend on Linux/Windows
+    set(MLN_DARWIN_USE_LIBUV ON CACHE BOOL "" FORCE)
+elseif(UNIX AND NOT APPLE)
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_X11 ON CACHE BOOL "" FORCE)
+    set(MLN_WITH_WAYLAND OFF CACHE BOOL "" FORCE)
     if(USE_VULKAN_BACKEND)
         set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
         set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
-        message(STATUS "Using Vulkan backend for Linux/Windows")
     else()
         set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
         set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-        message(STATUS "Using OpenGL backend for Linux/Windows")
+    endif()
+elseif(WIN32)
+    set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
+    set(MLN_WITH_EGL OFF CACHE BOOL "" FORCE) # TODO support EGL on Windows?
+    if(USE_VULKAN_BACKEND)
+        set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
+        set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
+    else()
+        set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
+        set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
     endif()
 endif()
 
 set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
 set(MLN_WITH_WERROR OFF CACHE BOOL "" FORCE)
 set(MLN_WITH_GLFW OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 
 # Add MapLibre Native
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native maplibre-native)
@@ -69,29 +81,23 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/conversions/resourceoptions_conversions.cpp
     src/main/cpp/map_observer.cpp
     src/main/cpp/maplibre_map.cpp
-    # New unified renderer architecture
     src/main/cpp/awt_canvas_renderer.cpp
     src/main/cpp/awt_backend_factory.cpp
 )
 
 # Add platform-specific backend sources
 if(APPLE)
-    # Metal backend for macOS
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/awt_metal_backend.mm
     )
+elseif(USE_VULKAN_BACKEND)
+    list(APPEND MAPLIBRE_JNI_SOURCES 
+        src/main/cpp/awt_vulkan_backend.cpp
+    )
 else()
-    if(USE_VULKAN_BACKEND)
-        # Vulkan backend for Linux/Windows
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/awt_vulkan_backend.cpp
-        )
-    else()
-        # OpenGL backend for Linux/Windows
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/awt_opengl_backend.cpp
-        )
-    endif()
+    list(APPEND MAPLIBRE_JNI_SOURCES 
+        src/main/cpp/awt_opengl_backend.cpp
+    )
 endif()
 
 add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
@@ -106,6 +112,14 @@ target_include_directories(maplibre-jni PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/src
 )
 
+# Add Windows-specific includes
+if(WIN32)
+    target_include_directories(maplibre-jni PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/vendor/vcpkg/installed/x64-windows/include
+    )
+endif()
+
 # Add Metal-cpp headers for macOS
 if(APPLE)
     target_include_directories(maplibre-jni PRIVATE
@@ -119,6 +133,13 @@ target_compile_options(maplibre-jni PRIVATE
     -frtti
     -fexceptions
 )
+
+# Windows-specific definitions
+if(WIN32)
+    target_compile_definitions(maplibre-jni PRIVATE
+        NOMINMAX  # Prevent min/max macro conflicts
+    )
+endif()
 
 # Pass backend selection to C++ code
 if(USE_VULKAN_BACKEND AND NOT APPLE)
@@ -135,24 +156,18 @@ target_link_libraries(maplibre-jni
 )
 
 # Link against JAWT for native window access
+find_library(JAWT_LIBRARY jawt HINTS ${JAVA_HOME}/lib ${JAVA_HOME}/jre/lib)
+if(JAWT_LIBRARY)
+    target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
+endif()
+
 if(APPLE)
-    find_library(JAWT_LIBRARY jawt HINTS ${JAVA_HOME}/lib ${JAVA_HOME}/jre/lib)
-    if(JAWT_LIBRARY)
-        target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
-    endif()
-    # Link against necessary macOS frameworks
     target_link_libraries(maplibre-jni PRIVATE 
         "-framework Cocoa"
         "-framework QuartzCore"
         "-framework Metal"
     )
 else()
-    # Linux/Windows
-    find_library(JAWT_LIBRARY jawt HINTS ${JAVA_HOME}/lib ${JAVA_HOME}/jre/lib/amd64)
-    if(JAWT_LIBRARY)
-        target_link_libraries(maplibre-jni PRIVATE ${JAWT_LIBRARY})
-    endif()
-
     # Find X11 for window system integration (Linux)
     if(UNIX AND NOT APPLE)
         find_package(X11 REQUIRED)
@@ -167,20 +182,24 @@ else()
         target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
         target_include_directories(maplibre-jni PRIVATE ${Vulkan_INCLUDE_DIRS})
     else()
-        # Find OpenGL and EGL
+        # Find OpenGL
         find_package(OpenGL REQUIRED)
         
-        # Find EGL - required for OpenGL context creation
-        find_library(EGL_LIBRARY EGL)
-        if(NOT EGL_LIBRARY)
-            message(FATAL_ERROR "EGL library not found")
+        # Find EGL - required for OpenGL context creation on Linux
+        # Windows uses WGL which comes with OpenGL
+        if(UNIX)
+            find_library(EGL_LIBRARY EGL)
+            if(NOT EGL_LIBRARY)
+                message(FATAL_ERROR "EGL library not found")
+            endif()
         endif()
         
-        target_link_libraries(maplibre-jni PRIVATE 
-            OpenGL::GL
-            OpenGL::EGL
-            ${EGL_LIBRARY}
-        )
+        target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
+        
+        # Link EGL only on Linux
+        if(UNIX)
+            target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
+        endif()
         
         # Add OpenGL/EGL include directories if needed
         if(OpenGL_INCLUDE_DIR)
@@ -192,4 +211,5 @@ endif()
 # Set output directory
 set_target_properties(maplibre-jni PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/lib/main/shared
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build/lib/main/shared
 )
