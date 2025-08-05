@@ -7,8 +7,16 @@
 #include <mbgl/util/size.hpp>
 #include <jni.h>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN 1
+#endif
+#include <Windows.h>
+#include <GL/gl.h>
+#else
 #include <EGL/egl.h>
 #include <GL/gl.h>
+#endif
 
 namespace maplibre_jni
 {
@@ -38,13 +46,19 @@ namespace maplibre_jni
         void updateAssumedState() override;
 
     private:
-        // EGL/OpenGL setup
+        // OpenGL setup
         void setupOpenGLContext(JNIEnv *env, jobject canvas);
         void destroyOpenGLContext();
         JNIEnv *getEnv();
 
         mbgl::Size size;
 
+#ifdef _WIN32
+        // WGL objects
+        HDC hdc = nullptr;
+        HGLRC hglrc = nullptr;
+        HWND hwnd = nullptr;
+#else
         // EGL objects
         EGLDisplay eglDisplay = EGL_NO_DISPLAY;
         EGLContext eglContext = EGL_NO_CONTEXT;
@@ -54,6 +68,7 @@ namespace maplibre_jni
         // Native display and window handles (stored as void* to avoid X11 header pollution)
         void *nativeDisplay = nullptr;
         void *nativeWindow = nullptr;
+#endif
 
         // JNI references
         JavaVM *javaVM = nullptr;

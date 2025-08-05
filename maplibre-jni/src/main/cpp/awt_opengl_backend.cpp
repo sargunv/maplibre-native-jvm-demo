@@ -8,18 +8,16 @@
 #include <jawt.h>
 #include <jawt_md.h>
 
-#ifdef __linux__
-#include <X11/Xlib.h>
-#endif
-
 #ifdef _WIN32
-#include <windows.h>
-#endif
-
+#include "gl_functions_wgl.h"
+#else
+#include <X11/Xlib.h>
 #include <EGL/eglext.h>
+#endif
 
 // Forward declaration
-namespace maplibre_jni {
+namespace maplibre_jni
+{
     class OpenGLBackend;
 }
 
@@ -27,14 +25,14 @@ namespace maplibre_jni {
 class OpenGLRenderableResource final : public mbgl::gl::RenderableResource
 {
 public:
-    explicit OpenGLRenderableResource(maplibre_jni::OpenGLBackend& backend_)
+    explicit OpenGLRenderableResource(maplibre_jni::OpenGLBackend &backend_)
         : backend(backend_) {}
 
     void bind() override;
     void swap() override;
 
 private:
-    maplibre_jni::OpenGLBackend& backend;
+    maplibre_jni::OpenGLBackend &backend;
 };
 
 namespace maplibre_jni
@@ -81,6 +79,15 @@ namespace maplibre_jni
 
     void OpenGLBackend::activate()
     {
+#ifdef _WIN32
+        if (hdc && hglrc)
+        {
+            if (!wglMakeCurrent(hdc, hglrc))
+            {
+                mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make WGL context current");
+            }
+        }
+#else
         if (eglDisplay != EGL_NO_DISPLAY && eglContext != EGL_NO_CONTEXT && eglSurface != EGL_NO_SURFACE)
         {
             if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
@@ -88,19 +95,31 @@ namespace maplibre_jni
                 mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make EGL context current");
             }
         }
+#endif
     }
 
     void OpenGLBackend::deactivate()
     {
+#ifdef _WIN32
+        if (hdc)
+        {
+            wglMakeCurrent(nullptr, nullptr);
+        }
+#else
         if (eglDisplay != EGL_NO_DISPLAY)
         {
             eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
         }
+#endif
     }
 
     mbgl::gl::ProcAddress OpenGLBackend::getExtensionFunctionPointer(const char *name)
     {
+#ifdef _WIN32
+        return reinterpret_cast<mbgl::gl::ProcAddress>(wgl_GetProcAddress(name));
+#else
         return eglGetProcAddress(name);
+#endif
     }
 
     void OpenGLBackend::updateAssumedState()
@@ -109,13 +128,20 @@ namespace maplibre_jni
         assumeFramebufferBinding(0);
         setViewport(0, 0, size);
     }
-    
+
     void OpenGLBackend::swapBuffers()
     {
+#ifdef _WIN32
+        if (hdc)
+        {
+            SwapBuffers(hdc);
+        }
+#else
         if (eglDisplay != EGL_NO_DISPLAY && eglSurface != EGL_NO_SURFACE)
         {
             eglSwapBuffers(eglDisplay, eglSurface);
         }
+#endif
     }
 
     JNIEnv *OpenGLBackend::getEnv()
@@ -183,7 +209,7 @@ namespace maplibre_jni
         // Store native handles for EGL
         nativeDisplay = x11Info->display;
         // X11 drawable is already the correct type (Window/XID)
-        nativeWindow = reinterpret_cast<void*>(x11Info->drawable);
+        nativeWindow = reinterpret_cast<void *>(x11Info->drawable);
 
         mbgl::Log::Info(mbgl::Event::OpenGL, "JAWT X11 surface extracted successfully");
 #elif _WIN32
@@ -198,10 +224,10 @@ namespace maplibre_jni
             return;
         }
 
-        // Store native handles for EGL
-        nativeDisplay = EGL_DEFAULT_DISPLAY;
-        // HWND is already a pointer type
-        nativeWindow = win32Info->hwnd;
+        // Store native handles for WGL
+        hwnd = win32Info->hwnd;
+        // Note: We'll get our own DC from the HWND rather than using JAWT's HDC
+        // as JAWT's HDC might not be suitable for OpenGL
 
         mbgl::Log::Info(mbgl::Event::OpenGL, "JAWT Win32 surface extracted successfully");
 #endif
@@ -212,6 +238,86 @@ namespace maplibre_jni
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
 
+#ifdef _WIN32
+        // Initialize WGL
+        // Get our own DC from the HWND
+        hdc = GetDC(hwnd);
+        if (!hdc)
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to get DC from HWND");
+            return;
+        }
+
+        PIXELFORMATDESCRIPTOR pfd;
+        ZeroMemory(&pfd, sizeof(pfd));
+        pfd.nSize = sizeof(pfd);
+        pfd.nVersion = 1;
+        pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+        pfd.iPixelType = PFD_TYPE_RGBA;
+        pfd.cColorBits = 24;
+        pfd.cAlphaBits = 8;
+        pfd.cDepthBits = 24;
+        pfd.cStencilBits = 8;
+
+        // Check if pixel format is already set by AWT
+        int pixelFormat = ChoosePixelFormat(hdc, &pfd);
+        if (pixelFormat == 0)
+        {
+            DWORD error = GetLastError();
+            mbgl::Log::Error(mbgl::Event::OpenGL,
+                             std::string("Failed to choose pixel format, error: ") + std::to_string(error));
+            return;
+        }
+
+        if (!SetPixelFormat(hdc, pixelFormat, &pfd))
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to set pixel format");
+            return;
+        }
+
+        // Create temporary context to load WGL extensions
+        HGLRC tempContext = wglCreateContext(hdc);
+        if (!tempContext)
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to create temporary WGL context");
+            return;
+        }
+
+        if (!wglMakeCurrent(hdc, tempContext))
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make temporary context current");
+            wglDeleteContext(tempContext);
+            return;
+        }
+
+        // Create modern OpenGL context using WGL_ARB_create_context
+        const int contextAttribs[] = {
+            WGL_CONTEXT_MAJOR_VERSION_ARB, 3,
+            WGL_CONTEXT_MINOR_VERSION_ARB, 0,
+            WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+            0};
+
+        hglrc = mbgl::platform::wglCreateContextAttribsARB(hdc, nullptr, contextAttribs);
+        if (!hglrc)
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to create OpenGL 3.0 context");
+            wglMakeCurrent(nullptr, nullptr);
+            wglDeleteContext(tempContext);
+            return;
+        }
+
+        // Switch to the new context and delete the temporary one
+        wglMakeCurrent(nullptr, nullptr);
+        wglDeleteContext(tempContext);
+
+        if (!wglMakeCurrent(hdc, hglrc))
+        {
+            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make WGL context current");
+            return;
+        }
+
+        mbgl::Log::Info(mbgl::Event::OpenGL, "WGL context created successfully");
+#else
         // Initialize EGL
         eglDisplay = eglGetDisplay(static_cast<EGLNativeDisplayType>(nativeDisplay));
         if (eglDisplay == EGL_NO_DISPLAY)
@@ -277,7 +383,6 @@ namespace maplibre_jni
             return;
         }
 
-        // Make context current
         if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
         {
             mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make EGL context current");
@@ -285,10 +390,25 @@ namespace maplibre_jni
         }
 
         mbgl::Log::Info(mbgl::Event::OpenGL, "OpenGL context created successfully");
+#endif // !_WIN32
     }
 
     void OpenGLBackend::destroyOpenGLContext()
     {
+#ifdef _WIN32
+        if (hglrc)
+        {
+            wglMakeCurrent(nullptr, nullptr);
+            wglDeleteContext(hglrc);
+            hglrc = nullptr;
+        }
+
+        if (hdc && hwnd)
+        {
+            ReleaseDC(hwnd, hdc);
+            hdc = nullptr;
+        }
+#else
         if (eglDisplay != EGL_NO_DISPLAY)
         {
             eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -308,11 +428,11 @@ namespace maplibre_jni
             eglTerminate(eglDisplay);
             eglDisplay = EGL_NO_DISPLAY;
         }
+#endif
     }
 
 } // namespace maplibre_jni
 
-// Implementation of OpenGLRenderableResource methods
 void OpenGLRenderableResource::bind()
 {
     backend.setFramebufferBinding(0);
