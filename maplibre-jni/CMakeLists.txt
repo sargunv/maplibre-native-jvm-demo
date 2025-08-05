@@ -22,22 +22,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Backend selection option
 option(USE_VULKAN_BACKEND "Use Vulkan backend instead of OpenGL on Linux/Windows" OFF)
 
-# Error if trying to use Vulkan on macOS
-if(APPLE AND USE_VULKAN_BACKEND)
-    message(FATAL_ERROR "USE_VULKAN_BACKEND cannot be used on macOS. macOS always uses the Metal backend.")
-endif()
-
 # Configure MapLibre Native build options based on platform
 if(APPLE)
-    if(APPLE AND USE_VULKAN_BACKEND)
+    if(USE_VULKAN_BACKEND)
         # TODO support Vulkan on macOS?
         message(FATAL_ERROR "USE_VULKAN_BACKEND not yet supported on macOS.")
     endif()
     set(MLN_WITH_METAL ON CACHE BOOL "" FORCE)
     set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-    set(MLN_DARWIN_USE_LIBUV ON CACHE BOOL "" FORCE)
-elseif(UNIX AND NOT APPLE)
+elseif(UNIX)
     set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
     set(MLN_WITH_X11 ON CACHE BOOL "" FORCE)
     set(MLN_WITH_WAYLAND OFF CACHE BOOL "" FORCE)
@@ -142,7 +136,7 @@ if(WIN32)
 endif()
 
 # Pass backend selection to C++ code
-if(USE_VULKAN_BACKEND AND NOT APPLE)
+if(USE_VULKAN_BACKEND)
     target_compile_definitions(maplibre-jni PRIVATE USE_VULKAN_BACKEND)
 endif()
 
@@ -169,7 +163,7 @@ if(APPLE)
     )
 else()
     # Find X11 for window system integration (Linux)
-    if(UNIX AND NOT APPLE)
+    if(UNIX)
         find_package(X11 REQUIRED)
         target_link_libraries(maplibre-jni PRIVATE ${X11_LIBRARIES})
         target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
