@@ -3,10 +3,11 @@
 MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends (Metal on macOS, OpenGL/Vulkan on Linux, OpenGL on Windows).
 
 ### Platform Support
-- ✅ **macOS**: Native Metal backend (fully functional)
-- ✅ **Linux**: Native OpenGL backend (default, functional with resize flickering)
-- ✅ **Linux**: Native Vulkan backend (optional via USE_VULKAN_BACKEND flag, same resize flickering)
-- ✅ **Windows**: Native OpenGL backend (functional with resize flickering)
+- ✅ **macOS Metal**: default
+- ✅ **Linux OpenGL**: default
+- ✅ **Linux Vulkan**: optional via `USE_VULKAN_BACKEND` flag
+- ✅ **Windows OpenGL**: default
+- ❌ **Windows Vulkan**: TODO
 
 ### What Works
 - Complete rendering pipeline with MapLibre Native integration
@@ -15,5 +16,6 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 - User interaction (pan, zoom, rotate via mouse/keyboard)
 
 ### What Doesn't Work Yet
-- Runtime styling (cannot modify styles after initialization)
-- Offline maps (no tile caching support)
+- Runtime styling
+- Offline maps
+- A bunch of other misc API methods

@@ -1,6 +1,7 @@
 package com.maplibre.jni
 
 import java.awt.Canvas
+import java.awt.Graphics
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.Timer
@@ -26,8 +27,19 @@ class MaplibreCanvas(
     addComponentListener(object : ComponentAdapter() {
       override fun componentResized(e: ComponentEvent) {
         if (width > 0 && height > 0) {
-          initializeMap()
-          removeComponentListener(this)
+          if (map == null) {
+            initializeMap()
+          } else {
+            // Update map size on resize
+            val pixelRatio = graphicsConfiguration?.defaultTransform?.scaleX?.toFloat() ?: 1.0f
+            val newSize = Size(
+              width = (width * pixelRatio).toInt(),
+              height = (height * pixelRatio).toInt()
+            )
+            map?.setSize(newSize)
+            // Force repaint
+            repaint()
+          }
         }
       }
     })
@@ -81,5 +93,12 @@ class MaplibreCanvas(
   override fun removeNotify() {
     super.removeNotify()
     dispose()
+  }
+
+  override fun paint(g: Graphics) {
+  }
+
+  override fun update(g: Graphics) {
+    paint(g);
   }
 }

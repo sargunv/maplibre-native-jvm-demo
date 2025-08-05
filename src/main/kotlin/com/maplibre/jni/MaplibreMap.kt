@@ -114,7 +114,7 @@ class MaplibreMap(
      * Sets the map size. This should be called when the viewport resizes.
      * @param size The new size in pixels
      */
-    internal fun setSize(size: Size) {
+    fun setSize(size: Size) {
         nativeSetSize(nativePtr, size)
     }
 

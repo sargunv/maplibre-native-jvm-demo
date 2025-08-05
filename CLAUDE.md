@@ -36,7 +36,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Error handling**: No robust error handling or logging implemented
 
 ### Known Issues
-- **Linux/Windows resize flickering**: Both Linux and Windows OpenGL backends exhibit flickering during window resize. This appears to be related to JAWT integration rather than the specific graphics API. The Metal backend (macOS) does not have this issue.
+- None currently
 
 ### Architecture Status
 ```
@@ -70,7 +70,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
    - Style switching at runtime
 
 ### Immediate Issues to Fix
-1. **Linux/Windows resize flickering**: Investigate JAWT integration to eliminate flicker on window resize
+- None currently
 
 #### Native Metal Integration (2025-08-03)
 - **Native Metal Backend**: Direct Metal rendering on macOS
@@ -233,8 +233,6 @@ Successfully implemented native Vulkan backend for Linux:
 - Immediate JAWT surface release after handle extraction (prevents AWT blocking)
 - Calls `requestSurfaceUpdate()` on resize for swapchain recreation
 
-### Known Issues
-- **Resize flickering**: Same as OpenGL backend - appears to be X11/JAWT integration issue
 
 ## Windows OpenGL Backend Implementation Notes (2025-01-05)
 
@@ -259,6 +257,4 @@ Successfully implemented native OpenGL backend for Windows:
 - Follows MapLibre's headless_backend_wgl.cpp patterns
 - Simplified approach since JAWT provides the window handle
 
-### Known Issues
-- **Resize flickering**: Same as Linux - appears to be JAWT integration issue
 

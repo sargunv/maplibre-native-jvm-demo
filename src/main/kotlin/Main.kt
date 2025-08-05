@@ -7,6 +7,10 @@ import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 fun main() {
+  // Disable AWT background erase to prevent resize flickering
+  // See: https://forum.jogamp.org/Resize-flickering-with-AWT-GLCanvas-and-JOGL-2-4-0-td4042181.html
+  System.setProperty("sun.awt.noerasebackground", "true")
+  
   SwingUtilities.invokeLater {
     val canvas = MaplibreCanvas(
       mapObserver = DemoObserver(),
