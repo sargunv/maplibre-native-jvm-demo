@@ -13,7 +13,7 @@
                 "MLN_WITH_GLFW": "OFF",
                 "MLN_WITH_EGL": "OFF",
                 "MLN_WITH_METAL": "OFF",
-                "MLN_WITH_OPENGL": "ON",
+                "MLN_WITH_OPENGL": "OFF",
                 "MLN_WITH_VULKAN": "OFF",
                 "JNI_HEADERS_DIR": "${sourceDir}/build/generated/jni-headers/kotlin/main"
             }
