@@ -261,7 +261,7 @@ namespace maplibre_jni
 
         // Create EGL surface
         eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig,
-                                            static_cast<EGLNativeWindowType>(nativeWindow),
+                                            reinterpret_cast<EGLNativeWindowType>(nativeWindow),
                                             nullptr);
         if (eglSurface == EGL_NO_SURFACE)
         {
@@ -329,4 +329,4 @@ void EGLRenderableResource::swap()
     backend.swapBuffers();
 }
 
-#endif USE_EGL_BACKEND
+#endif // USE_EGL_BACKEND
