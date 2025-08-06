@@ -13,10 +13,10 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 | Windows arm64   | ⚠️ (ANGLE) | ❔ (WGL)    | ✅            | N/A   |
 | Windows x64     | ✅ (ANGLE) | ✅ (WGL)    | ✅            | N/A   |
 
-❌ = Not implemented
-✅ = Implemented and working
-❔ = Implemented but not tested  
-⚠️ = Implemented but has issues (see notes below)
+❌ = Not implemented<br />
+✅ = Implemented and working<br />
+❔ = Implemented but not tested <br />
+⚠️ = Implemented but has issues (see notes below)<br />
 
 ### Known issues
 
