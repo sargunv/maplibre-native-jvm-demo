@@ -19,45 +19,6 @@ find_package(JNI REQUIRED)
 # Enable position-independent code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Backend selection option
-option(USE_VULKAN_BACKEND "Use Vulkan backend instead of OpenGL on Linux/Windows" OFF)
-
-# Configure MapLibre Native build options based on platform
-if(APPLE)
-    if(USE_VULKAN_BACKEND)
-        # TODO support Vulkan on macOS?
-        message(FATAL_ERROR "USE_VULKAN_BACKEND not yet supported on macOS.")
-    endif()
-    set(MLN_WITH_METAL ON CACHE BOOL "" FORCE)
-    set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-elseif(UNIX)
-    set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_X11 ON CACHE BOOL "" FORCE)
-    set(MLN_WITH_WAYLAND OFF CACHE BOOL "" FORCE)
-    if(USE_VULKAN_BACKEND)
-        set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
-        set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
-    else()
-        set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
-        set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-    endif()
-elseif(WIN32)
-    set(MLN_WITH_METAL OFF CACHE BOOL "" FORCE)
-    set(MLN_WITH_EGL OFF CACHE BOOL "" FORCE) # TODO support EGL on Windows?
-    if(USE_VULKAN_BACKEND)
-        set(MLN_WITH_OPENGL OFF CACHE BOOL "" FORCE)
-        set(MLN_WITH_VULKAN ON CACHE BOOL "" FORCE)
-    else()
-        set(MLN_WITH_OPENGL ON CACHE BOOL "" FORCE)
-        set(MLN_WITH_VULKAN OFF CACHE BOOL "" FORCE)
-    endif()
-endif()
-
-set(MLN_WITH_RTTI ON CACHE BOOL "" FORCE)
-set(MLN_WITH_WERROR OFF CACHE BOOL "" FORCE)
-set(MLN_WITH_GLFW OFF CACHE BOOL "" FORCE)
-
 # Add MapLibre Native
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native maplibre-native)
 
@@ -136,7 +97,7 @@ if(WIN32)
 endif()
 
 # Pass backend selection to C++ code
-if(USE_VULKAN_BACKEND)
+if(MLN_WITH_VULKAN)
     target_compile_definitions(maplibre-jni PRIVATE USE_VULKAN_BACKEND)
 endif()
 
@@ -169,7 +130,7 @@ else()
         target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
     endif()
     
-    if(USE_VULKAN_BACKEND)
+    if(MLN_WITH_VULKAN)
         # Find Vulkan
         find_package(Vulkan REQUIRED)
         

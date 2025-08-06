@@ -1,19 +1,16 @@
 import org.gradle.internal.os.OperatingSystem
 
-// Task to configure CMake
 tasks.register<Exec>("configureCMake") {
     dependsOn(":generateKotlinMainJniHeaders")
     
     val buildDir = layout.buildDirectory.dir("cmake").get().asFile
     val jniHeadersDir = layout.buildDirectory.dir("generated/jni-headers/kotlin/main").get().asFile
     
-    // Inputs
     inputs.file("CMakeLists.txt")
     inputs.dir("src/main/cpp")
     inputs.dir(jniHeadersDir)
     inputs.dir("../vendor/maplibre-native")
     
-    // Outputs
     outputs.dir(buildDir)
     outputs.file(buildDir.resolve("CMakeCache.txt"))
     
@@ -23,23 +20,19 @@ tasks.register<Exec>("configureCMake") {
     
     workingDir = buildDir
     
-    val vcpkgToolchain = file("../vendor/maplibre-native/platform/windows/vendor/vcpkg/scripts/buildsystems/vcpkg.cmake")
-    
-    val cmakeArgs = mutableListOf(
-        "cmake",
-        "-G", "Ninja",
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON",
-        "-DJNI_HEADERS_DIR=${jniHeadersDir.absolutePath}"
-    )
-    
-    if (OperatingSystem.current().isWindows) {
-        cmakeArgs.add("-DCMAKE_TOOLCHAIN_FILE=${vcpkgToolchain.absolutePath}")
+    val preset = when {
+        OperatingSystem.current().isWindows -> "windows-opengl"
+        OperatingSystem.current().isLinux -> "linux-opengl"
+        OperatingSystem.current().isMacOsX -> "macos-metal"
+        else -> throw GradleException("Unsupported operating system")
     }
-    
-    cmakeArgs.add(projectDir.absolutePath)
-    
-    commandLine(cmakeArgs)
+
+    commandLine(listOf(
+        "cmake",
+        "--preset",
+        preset,
+        projectDir.absolutePath
+    ))
 }
 
 tasks.register<Exec>("build") {
@@ -61,7 +54,12 @@ tasks.register<Exec>("build") {
 tasks.register<Delete>("clean") {
     delete(layout.buildDirectory.dir("cmake"))
     delete(layout.buildDirectory.dir("lib"))
-    delete(layout.buildDirectory.dir("vscode"))
+    delete(layout.buildDirectory.dir("vscode"))    
+    doLast {
+        project.exec {
+            commandLine("git", "submodule", "foreach", "--recursive", "git reset --hard && git clean -xfd")
+        }
+    }
 }
 
 tasks.withType<Test> {

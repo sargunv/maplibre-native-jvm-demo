@@ -1,12 +1,9 @@
 {
     "cmake.sourceDirectory": "${workspaceFolder}/maplibre-jni",
-    "cmake.buildDirectory": "${workspaceFolder}/maplibre-jni/build/vscode/cmake",
-    "cmake.generator": "Ninja",
-    "cmake.configureArgs": [
-        "-DJNI_HEADERS_DIR=${workspaceFolder}/maplibre-jni/build/generated/jni-headers/kotlin/main",
-        "-DCMAKE_TOOLCHAIN_FILE=${workspaceFolder}/vendor/maplibre-native/platform/windows/vendor/vcpkg/scripts/buildsystems/vcpkg.cmake"
-    ],
-    "files.associations": {
-        "memory": "cpp"
-    }
+    "cmake.configureOnOpen": true,
+    "cmake.automaticReconfigure": true,
+    "cmake.useVsDeveloperEnvironment": "always",
+    "C_Cpp.inlayHints.autoDeclarationTypes.enabled": true,
+    "C_Cpp.inlayHints.parameterNames.enabled": true,
+    "C_Cpp.inlayHints.referenceOperator.enabled": true,
 }
