@@ -1,4 +1,4 @@
-#ifdef __APPLE__
+#ifdef USE_METAL_BACKEND
 
 #include "awt_metal_backend.hpp"
 #include <mbgl/mtl/renderable_resource.hpp>
@@ -297,4 +297,4 @@ std::unique_ptr<mbgl::gfx::RendererBackend> createMetalBackend(
 
 } // namespace maplibre_jni
 
-#endif // __APPLE__
+#endif // USE_METAL_BACKEND

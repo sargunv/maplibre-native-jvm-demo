@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef __APPLE__
+#ifdef USE_VULKAN_BACKEND
 
 #include <mbgl/vulkan/renderable_resource.hpp>
 #include <mbgl/vulkan/renderer_backend.hpp>
@@ -51,4 +51,4 @@ namespace maplibre_jni
 
 } // namespace maplibre_jni
 
-#endif // !__APPLE__
+#endif

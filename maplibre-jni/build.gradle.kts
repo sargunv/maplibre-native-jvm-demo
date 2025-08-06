@@ -21,8 +21,8 @@ tasks.register<Exec>("configureCMake") {
     workingDir = buildDir
     
     val preset = when {
-        OperatingSystem.current().isWindows -> "windows-opengl"
-        OperatingSystem.current().isLinux -> "linux-opengl"
+        OperatingSystem.current().isWindows -> "windows-egl"
+        OperatingSystem.current().isLinux -> "linux-egl"
         OperatingSystem.current().isMacOsX -> "macos-metal"
         else -> throw GradleException("Unsupported operating system")
     }

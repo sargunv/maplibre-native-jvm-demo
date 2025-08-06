@@ -5,37 +5,33 @@
 #include <memory>
 #include <jni.h>
 
-#ifdef __APPLE__
+#ifdef USE_METAL_BACKEND
 #include "awt_metal_backend.hpp"
-#else
-// Check if we're using Vulkan or OpenGL backend
-#ifdef USE_VULKAN_BACKEND
+#elif USE_VULKAN_BACKEND
 #include "awt_vulkan_backend.hpp"
-#else
-#include "awt_opengl_backend.hpp"
-#endif
+#elif USE_EGL_BACKEND
+#include "awt_egl_backend.hpp"
+#elif USE_WGL_BACKEND
+#include "awt_wgl_backend.hpp"
 #endif
 
-namespace maplibre_jni {
-
-// Platform-specific type alias
-#ifdef __APPLE__
+namespace maplibre_jni
+{
+#ifdef USE_METAL_BACKEND
     using PlatformBackend = MetalBackend;
-#else
-    #ifdef USE_VULKAN_BACKEND
-        using PlatformBackend = VulkanBackend;
-    #else
-        using PlatformBackend = OpenGLBackend;
-    #endif
+#elif USE_VULKAN_BACKEND
+    using PlatformBackend = VulkanBackend;
+#elif USE_EGL_BACKEND
+    using PlatformBackend = EGLBackend;
+#elif USE_WGL_BACKEND
+    using PlatformBackend = WGLBackend;
 #endif
 
-// Factory function to create platform-specific backend
-std::unique_ptr<PlatformBackend> createPlatformBackend(
-    JNIEnv* env, 
-    jobject canvas, 
-    int width, 
-    int height,
-    const mbgl::gfx::ContextMode contextMode
-);
+    std::unique_ptr<PlatformBackend> createPlatformBackend(
+        JNIEnv *env,
+        jobject canvas,
+        int width,
+        int height,
+        const mbgl::gfx::ContextMode contextMode);
 
 } // namespace maplibre_jni

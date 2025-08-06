@@ -3,11 +3,17 @@
 MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends (Metal on macOS, OpenGL/Vulkan on Linux, OpenGL on Windows).
 
 ### Platform Support
-- ✅ **macOS Metal**: default
-- ✅ **Linux OpenGL**: default
-- ✅ **Linux Vulkan**: optional via `USE_VULKAN_BACKEND` flag
-- ✅ **Windows OpenGL**: default
-- ❌ **Windows Vulkan**: TODO
+
+| Renderer      | EGL | WGL | Vulkan | Metal |
+| ------------- | --- | --- | ------ | ----- |
+| macOS arm64   | ❌   | N/A | ❌      | ✅     |
+| macOS x64     | ❌   | N/A | ❌      | ❔*    |
+| Linux arm64   | ✅   | N/A | ✅      | N/A   |
+| Linux x64     | ✅   | N/A | ✅      | N/A   |
+| Windows arm64 | ✅   | N/A | ❌      | N/A   |
+| Windows x64   | ✅   | ✅   | ❌      | N/A   |
+
+* untested
 
 ### What Works
 - Complete rendering pipeline with MapLibre Native integration

@@ -11,10 +11,10 @@
                 "MLN_WITH_RTTI": "ON",
                 "MLN_WITH_WERROR": "OFF",
                 "MLN_WITH_GLFW": "OFF",
+                "MLN_WITH_EGL": "OFF",
                 "MLN_WITH_METAL": "OFF",
                 "MLN_WITH_OPENGL": "ON",
                 "MLN_WITH_VULKAN": "OFF",
-                "MLN_WITH_EGL": "OFF",
                 "JNI_HEADERS_DIR": "${sourceDir}/build/generated/jni-headers/kotlin/main"
             }
         },
@@ -35,10 +35,19 @@
             }
         },
         {
-            "name": "windows-opengl",
+            "name": "windows-wgl",
             "inherits": "windows-base",
             "cacheVariables": {
-                "MLN_WITH_OPENGL": "ON"
+                "MLN_WITH_OPENGL": "ON",
+                "MLN_WITH_EGL": "OFF"
+            }
+        },
+        {
+            "name": "windows-egl",
+            "inherits": "windows-base",
+            "cacheVariables": {
+                "MLN_WITH_OPENGL": "ON",
+                "MLN_WITH_EGL": "ON"
             }
         },
         {
@@ -66,7 +75,7 @@
             }
         },
         {
-            "name": "linux-opengl",
+            "name": "linux-egl",
             "inherits": "linux-base",
             "cacheVariables": {
                 "MLN_WITH_OPENGL": "ON",

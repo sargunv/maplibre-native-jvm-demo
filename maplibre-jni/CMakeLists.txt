@@ -41,18 +41,24 @@ set(MAPLIBRE_JNI_SOURCES
 )
 
 # Add platform-specific backend sources
-if(APPLE)
+if(MLN_WITH_METAL)
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/awt_metal_backend.mm
     )
-elseif(USE_VULKAN_BACKEND)
+elseif(MLN_WITH_VULKAN)
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/awt_vulkan_backend.cpp
     )
-else()
+elseif(MLN_WITH_OPENGL AND MLN_WITH_EGL)
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_opengl_backend.cpp
+        src/main/cpp/awt_egl_backend.cpp
     )
+elseif(WIN32 AND MLN_WITH_OPENGL)
+    list(APPEND MAPLIBRE_JNI_SOURCES 
+        src/main/cpp/awt_wgl_backend.cpp
+    )
+else()
+    message(FATAL_ERROR "Unsupported backend configuration.")
 endif()
 
 add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
@@ -97,8 +103,21 @@ if(WIN32)
 endif()
 
 # Pass backend selection to C++ code
+if(MLN_WITH_METAL)
+    target_compile_definitions(maplibre-jni PRIVATE USE_METAL_BACKEND)
+endif()
+
+# Pass backend selection to C++ code
 if(MLN_WITH_VULKAN)
     target_compile_definitions(maplibre-jni PRIVATE USE_VULKAN_BACKEND)
+endif()
+
+if(MLN_WITH_OPENGL)
+    if (MLN_WITH_EGL)
+        target_compile_definitions(maplibre-jni PRIVATE USE_EGL_BACKEND)
+    elseif(WIN32)
+        target_compile_definitions(maplibre-jni PRIVATE USE_WGL_BACKEND)
+    endif()
 endif()
 
 # Link against MapLibre (this brings in all dependencies)
@@ -137,28 +156,39 @@ else()
         target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
         target_include_directories(maplibre-jni PRIVATE ${Vulkan_INCLUDE_DIRS})
     else()
-        # Find OpenGL
-        find_package(OpenGL REQUIRED)
-        
-        # Find EGL - required for OpenGL context creation on Linux
-        # Windows uses WGL which comes with OpenGL
-        if(UNIX)
-            find_library(EGL_LIBRARY EGL)
-            if(NOT EGL_LIBRARY)
-                message(FATAL_ERROR "EGL library not found")
+        # OpenGL backend - choose between WGL and EGL
+        if(MLN_WITH_EGL)
+            # Using EGL backend (ANGLE on Windows, native EGL on Linux)
+            if(WIN32)
+                # On Windows, use ANGLE libraries from vcpkg
+                find_package(unofficial-angle CONFIG REQUIRED)
+                target_link_libraries(maplibre-jni PRIVATE unofficial::angle::libEGL unofficial::angle::libGLESv2)
+            else()
+                # On Linux, use system EGL
+                find_library(EGL_LIBRARY EGL)
+                if(NOT EGL_LIBRARY)
+                    message(FATAL_ERROR "EGL library not found")
+                endif()
+                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
             endif()
-        endif()
-        
-        target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
-        
-        # Link EGL only on Linux
-        if(UNIX)
-            target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
-        endif()
-        
-        # Add OpenGL/EGL include directories if needed
-        if(OpenGL_INCLUDE_DIR)
-            target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+        else()
+            # Using WGL backend on Windows or EGL on Linux
+            if(WIN32)
+                # WGL uses standard OpenGL
+                find_package(OpenGL REQUIRED)
+                target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
+                
+                if(OpenGL_INCLUDE_DIR)
+                    target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+                endif()
+            else()
+                # Linux always uses EGL
+                find_library(EGL_LIBRARY EGL)
+                if(NOT EGL_LIBRARY)
+                    message(FATAL_ERROR "EGL library not found")
+                endif()
+                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
+            endif()
         endif()
     endif()
 endif()

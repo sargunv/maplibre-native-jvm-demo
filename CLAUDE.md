@@ -14,15 +14,16 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - **MapLibre Native as Git Submodule**: At `vendor/maplibre-native`
 - **CMake Integration**: Single CMakeLists.txt builds both MapLibre and JNI code
 
-## Current Status (2025-01-05)
+## Current Status (2025-01-06)
 
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
 - ✅ **Cross-platform JAWT integration**: Unified AwtCanvasRenderer with platform-specific backends
-- ✅ **Native OpenGL backend on Linux**: OpenGL ES 2.0 rendering via EGL (default)
+- ✅ **Native OpenGL backend on Linux**: OpenGL ES 2.0 rendering via EGL
 - ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface (optional)
-- ✅ **Native OpenGL backend on Windows**: OpenGL 3.0 rendering via WGL
+- ✅ **Native OpenGL backend on Windows x64**: OpenGL 3.0 rendering via WGL
+- ✅ **Native OpenGL backend on Windows ARM64**: OpenGL ES 2.0 rendering via EGL/ANGLE
 - ✅ **Network resource loading**: Remote styles and tiles load successfully
 - ✅ **Async event processing**: RunLoop processes callbacks in render loop
 - ✅ **MapLibre initialization**: All components initialize successfully
@@ -36,7 +37,7 @@ Uses CMake to build MapLibre from source with custom JNI code:
 - ❌ **Error handling**: No robust error handling or logging implemented
 
 ### Known Issues
-- None currently
+- Application crashes on exit with Windows ARM64 EGL backend (exit code -1073741819)
 
 ### Architecture Status
 ```
@@ -128,11 +129,12 @@ maplibre-jni/
 └── src/main/cpp/
     ├── jni_helpers.hpp         # Common JNI utilities
     ├── awt_metal_backend.mm    # Metal backend for macOS
-    ├── awt_opengl_backend.cpp  # OpenGL backend for Linux/Windows (default)
-    ├── awt_vulkan_backend.cpp  # Vulkan backend for Linux/Windows (optional)
+    ├── awt_wgl_backend.cpp     # WGL backend for Windows x64
+    ├── awt_egl_backend.cpp     # EGL backend for Linux and Windows ARM64
+    ├── awt_vulkan_backend.cpp  # Vulkan backend (optional)
     ├── awt_backend_factory.cpp # Platform backend factory
     ├── awt_canvas_renderer.cpp # Unified renderer frontend
-    └── maplibre_map.cpp    # Map and observer wrappers
+    └── maplibre_map.cpp        # Map and observer wrappers
 
 src/main/kotlin/
 └── com/maplibre/jni/           # Kotlin API layer
@@ -233,6 +235,34 @@ Successfully implemented native Vulkan backend for Linux:
 - Immediate JAWT surface release after handle extraction (prevents AWT blocking)
 - Calls `requestSurfaceUpdate()` on resize for swapchain recreation
 
+
+## Windows ARM64 EGL Backend Implementation Notes (2025-01-06)
+
+### Implementation Status
+Successfully implemented native EGL backend for Windows ARM64:
+1. Split OpenGL backend into separate WGL and EGL implementations
+2. EGL backend uses ANGLE (Almost Native Graphics Layer Engine) for OpenGL ES → DirectX translation
+3. Windows ARM64 devices lack native OpenGL drivers, making ANGLE/EGL the only viable option
+4. Same EGL backend works on both Linux (native EGL) and Windows (ANGLE)
+
+### Key Technical Details
+- EGL backend inherits from `mbgl::gl::RendererBackend` and `mbgl::gfx::Renderable`
+- Uses `EGL_DEFAULT_DISPLAY` on Windows (ANGLE pattern)
+- Creates OpenGL ES 2.0 context (`EGL_CONTEXT_CLIENT_VERSION, 2`)
+- ANGLE libraries (libEGL.dll, libGLESv2.dll) provided by MapLibre's vcpkg dependencies
+- Requires Visual C++ runtime (vcruntime140.dll, msvcp140.dll) and DirectX (dxgi.dll, d3d9.dll)
+
+### Build Configuration
+- Use `MLN_WITH_EGL=ON` CMake flag for EGL backend
+- Default WGL backend: `windows-wgl` preset (Windows x64)
+- EGL backend: `windows-egl` preset (Windows ARM64)
+- All dependency DLLs automatically packaged as resources
+
+### Native Library Loading
+- Windows requires loading all dependency DLLs in correct order
+- System libraries (VC++ runtime, DirectX) loaded via `System.loadLibrary()`
+- Application libraries extracted to temp directory and loaded via `System.load()`
+- Load order matters: dependencies → libGLESv2.dll → libEGL.dll → maplibre-jni.dll
 
 ## Windows OpenGL Backend Implementation Notes (2025-01-05)
 

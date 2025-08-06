@@ -1,4 +1,4 @@
-#ifndef __APPLE__
+#ifdef USE_VULKAN_BACKEND
 
 #include "awt_vulkan_backend.hpp"
 #include <mbgl/vulkan/renderable_resource.hpp>
@@ -113,7 +113,7 @@ namespace maplibre_jni
         // Update both our local size and the Renderable's size
         size = newSize;
         this->mbgl::vulkan::Renderable::size = newSize;
-        
+
         if (context)
         {
             auto &contextImpl = static_cast<mbgl::vulkan::Context &>(*context);
@@ -218,4 +218,4 @@ namespace maplibre_jni
 
 } // namespace maplibre_jni
 
-#endif // !__APPLE__
+#endif // USE_VULKAN_BACKEND

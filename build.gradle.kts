@@ -47,7 +47,10 @@ tasks.register<Copy>("copyNativeLibrary") {
         else -> throw GradleException("Unsupported OS")
     }
     
-    from("maplibre-jni/build/lib/main/shared/$libName")
+    // Copy all libraries from the shared folder
+    from("maplibre-jni/build/lib/main/shared/") {
+        include("*.dll", "*.so", "*.dylib")
+    }
     into("$buildDir/generated/resources/main/native/$osFolder")
 }
 

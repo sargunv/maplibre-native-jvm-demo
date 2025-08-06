@@ -1,6 +1,6 @@
-#ifndef __APPLE__
+#ifdef USE_WGL_BACKEND
 
-#include "awt_opengl_backend.hpp"
+#include "awt_wgl_backend.hpp"
 #include <mbgl/gl/context.hpp>
 #include <mbgl/gl/renderable_resource.hpp>
 #include <mbgl/util/logging.hpp>
@@ -8,51 +8,46 @@
 #include <jawt.h>
 #include <jawt_md.h>
 
-#ifdef _WIN32
 #include "gl_functions_wgl.h"
-#else
-#include <X11/Xlib.h>
-#include <EGL/eglext.h>
-#endif
 
 // Forward declaration
 namespace maplibre_jni
 {
-    class OpenGLBackend;
+    class WGLBackend;
 }
 
-// OpenGLRenderableResource in global namespace to match GLFW pattern
-class OpenGLRenderableResource final : public mbgl::gl::RenderableResource
+// WGLRenderableResource in global namespace to match GLFW pattern
+class WGLRenderableResource final : public mbgl::gl::RenderableResource
 {
 public:
-    explicit OpenGLRenderableResource(maplibre_jni::OpenGLBackend &backend_)
+    explicit WGLRenderableResource(maplibre_jni::WGLBackend &backend_)
         : backend(backend_) {}
 
     void bind() override;
     void swap() override;
 
 private:
-    maplibre_jni::OpenGLBackend &backend;
+    maplibre_jni::WGLBackend &backend;
 };
 
 namespace maplibre_jni
 {
 
-    OpenGLBackend::OpenGLBackend(JNIEnv *env, jobject canvas, int width, int height)
+    WGLBackend::WGLBackend(JNIEnv *env, jobject canvas, int width, int height)
         : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique),
           mbgl::gfx::Renderable(
               mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
-              std::make_unique<OpenGLRenderableResource>(*this)),
+              std::make_unique<WGLRenderableResource>(*this)),
           size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)})
     {
         env->GetJavaVM(&javaVM);
         canvasRef = env->NewGlobalRef(canvas);
-        setupOpenGLContext(env, canvas);
+        setupWGLContext(env, canvas);
     }
 
-    OpenGLBackend::~OpenGLBackend()
+    WGLBackend::~WGLBackend()
     {
-        destroyOpenGLContext();
+        destroyWGLContext();
 
         if (canvasRef)
         {
@@ -65,21 +60,20 @@ namespace maplibre_jni
         }
     }
 
-    mbgl::gfx::Renderable &OpenGLBackend::getDefaultRenderable()
+    mbgl::gfx::Renderable &WGLBackend::getDefaultRenderable()
     {
         return *this;
     }
 
-    void OpenGLBackend::setSize(mbgl::Size newSize)
+    void WGLBackend::setSize(mbgl::Size newSize)
     {
         // Update both our local size and the Renderable's size
         size = newSize;
         this->mbgl::gfx::Renderable::size = newSize;
     }
 
-    void OpenGLBackend::activate()
+    void WGLBackend::activate()
     {
-#ifdef _WIN32
         if (hdc && hglrc)
         {
             if (!wglMakeCurrent(hdc, hglrc))
@@ -87,64 +81,37 @@ namespace maplibre_jni
                 mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make WGL context current");
             }
         }
-#else
-        if (eglDisplay != EGL_NO_DISPLAY && eglContext != EGL_NO_CONTEXT && eglSurface != EGL_NO_SURFACE)
-        {
-            if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
-            {
-                mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make EGL context current");
-            }
-        }
-#endif
     }
 
-    void OpenGLBackend::deactivate()
+    void WGLBackend::deactivate()
     {
-#ifdef _WIN32
         if (hdc)
         {
             wglMakeCurrent(nullptr, nullptr);
         }
-#else
-        if (eglDisplay != EGL_NO_DISPLAY)
-        {
-            eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        }
-#endif
     }
 
-    mbgl::gl::ProcAddress OpenGLBackend::getExtensionFunctionPointer(const char *name)
+    mbgl::gl::ProcAddress WGLBackend::getExtensionFunctionPointer(const char *name)
     {
-#ifdef _WIN32
         return reinterpret_cast<mbgl::gl::ProcAddress>(wgl_GetProcAddress(name));
-#else
-        return eglGetProcAddress(name);
-#endif
     }
 
-    void OpenGLBackend::updateAssumedState()
+    void WGLBackend::updateAssumedState()
     {
         // Reset GL state assumptions
         assumeFramebufferBinding(0);
         setViewport(0, 0, size);
     }
 
-    void OpenGLBackend::swapBuffers()
+    void WGLBackend::swapBuffers()
     {
-#ifdef _WIN32
         if (hdc)
         {
             SwapBuffers(hdc);
         }
-#else
-        if (eglDisplay != EGL_NO_DISPLAY && eglSurface != EGL_NO_SURFACE)
-        {
-            eglSwapBuffers(eglDisplay, eglSurface);
-        }
-#endif
     }
 
-    JNIEnv *OpenGLBackend::getEnv()
+    JNIEnv *WGLBackend::getEnv()
     {
         JNIEnv *env = nullptr;
         if (javaVM)
@@ -154,7 +121,7 @@ namespace maplibre_jni
         return env;
     }
 
-    void OpenGLBackend::setupOpenGLContext(JNIEnv *env, jobject canvas)
+    void WGLBackend::setupWGLContext(JNIEnv *env, jobject canvas)
     {
         // Get JAWT
         JAWT awt;
@@ -194,25 +161,6 @@ namespace maplibre_jni
             return;
         }
 
-#ifdef __linux__
-        // Get the X11 drawing surface info
-        JAWT_X11DrawingSurfaceInfo *x11Info = (JAWT_X11DrawingSurfaceInfo *)dsi->platformInfo;
-        if (!x11Info)
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Platform info is null");
-            ds->FreeDrawingSurfaceInfo(dsi);
-            ds->Unlock(ds);
-            awt.FreeDrawingSurface(ds);
-            return;
-        }
-
-        // Store native handles for EGL
-        nativeDisplay = x11Info->display;
-        // X11 drawable is already the correct type (Window/XID)
-        nativeWindow = reinterpret_cast<void *>(x11Info->drawable);
-
-        mbgl::Log::Info(mbgl::Event::OpenGL, "JAWT X11 surface extracted successfully");
-#elif _WIN32
         // Get the Windows drawing surface info
         JAWT_Win32DrawingSurfaceInfo *win32Info = (JAWT_Win32DrawingSurfaceInfo *)dsi->platformInfo;
         if (!win32Info)
@@ -230,7 +178,6 @@ namespace maplibre_jni
         // as JAWT's HDC might not be suitable for OpenGL
 
         mbgl::Log::Info(mbgl::Event::OpenGL, "JAWT Win32 surface extracted successfully");
-#endif
 
         // We must unlock the surface immediately after getting the handles
         // Otherwise AWT event processing will be blocked
@@ -238,7 +185,6 @@ namespace maplibre_jni
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
 
-#ifdef _WIN32
         // Initialize WGL
         // Get our own DC from the HWND
         hdc = GetDC(hwnd);
@@ -317,85 +263,10 @@ namespace maplibre_jni
         }
 
         mbgl::Log::Info(mbgl::Event::OpenGL, "WGL context created successfully");
-#else
-        // Initialize EGL
-        eglDisplay = eglGetDisplay(static_cast<EGLNativeDisplayType>(nativeDisplay));
-        if (eglDisplay == EGL_NO_DISPLAY)
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to get EGL display");
-            return;
-        }
-
-        EGLint major, minor;
-        if (!eglInitialize(eglDisplay, &major, &minor))
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to initialize EGL");
-            return;
-        }
-
-        mbgl::Log::Info(mbgl::Event::OpenGL,
-                        std::string("EGL initialized: ") + std::to_string(major) + "." + std::to_string(minor));
-
-        // Choose EGL config
-        const EGLint configAttribs[] = {
-            EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-            EGL_RED_SIZE, 8,
-            EGL_GREEN_SIZE, 8,
-            EGL_BLUE_SIZE, 8,
-            EGL_ALPHA_SIZE, 8,
-            EGL_DEPTH_SIZE, 24,
-            EGL_STENCIL_SIZE, 8,
-            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-            EGL_NONE};
-
-        EGLint numConfigs;
-        if (!eglChooseConfig(eglDisplay, configAttribs, &eglConfig, 1, &numConfigs) || numConfigs == 0)
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to choose EGL config");
-            return;
-        }
-
-        // Create EGL surface
-#ifdef __linux__
-        eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig,
-                                            reinterpret_cast<EGLNativeWindowType>(nativeWindow),
-                                            nullptr);
-#elif _WIN32
-        eglSurface = eglCreateWindowSurface(eglDisplay, eglConfig,
-                                            static_cast<EGLNativeWindowType>(nativeWindow),
-                                            nullptr);
-#endif
-        if (eglSurface == EGL_NO_SURFACE)
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to create EGL surface");
-            return;
-        }
-
-        // Create EGL context
-        const EGLint contextAttribs[] = {
-            EGL_CONTEXT_CLIENT_VERSION, 2,
-            EGL_NONE};
-
-        eglContext = eglCreateContext(eglDisplay, eglConfig, EGL_NO_CONTEXT, contextAttribs);
-        if (eglContext == EGL_NO_CONTEXT)
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to create EGL context");
-            return;
-        }
-
-        if (!eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
-        {
-            mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make EGL context current");
-            return;
-        }
-
-        mbgl::Log::Info(mbgl::Event::OpenGL, "OpenGL context created successfully");
-#endif // !_WIN32
     }
 
-    void OpenGLBackend::destroyOpenGLContext()
+    void WGLBackend::destroyWGLContext()
     {
-#ifdef _WIN32
         if (hglrc)
         {
             wglMakeCurrent(nullptr, nullptr);
@@ -408,40 +279,19 @@ namespace maplibre_jni
             ReleaseDC(hwnd, hdc);
             hdc = nullptr;
         }
-#else
-        if (eglDisplay != EGL_NO_DISPLAY)
-        {
-            eglMakeCurrent(eglDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-
-            if (eglContext != EGL_NO_CONTEXT)
-            {
-                eglDestroyContext(eglDisplay, eglContext);
-                eglContext = EGL_NO_CONTEXT;
-            }
-
-            if (eglSurface != EGL_NO_SURFACE)
-            {
-                eglDestroySurface(eglDisplay, eglSurface);
-                eglSurface = EGL_NO_SURFACE;
-            }
-
-            eglTerminate(eglDisplay);
-            eglDisplay = EGL_NO_DISPLAY;
-        }
-#endif
     }
 
 } // namespace maplibre_jni
 
-void OpenGLRenderableResource::bind()
+void WGLRenderableResource::bind()
 {
     backend.setFramebufferBinding(0);
     backend.setViewport(0, 0, backend.getSize());
 }
 
-void OpenGLRenderableResource::swap()
+void WGLRenderableResource::swap()
 {
     backend.swapBuffers();
 }
 
-#endif // !__APPLE__
+#endif // USE_WGL_BACKEND
