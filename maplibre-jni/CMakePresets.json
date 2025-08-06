@@ -110,6 +110,13 @@
             "cacheVariables": {
                 "MLN_WITH_METAL": "ON"
             }
+        },
+        {
+            "name": "macos-vulkan",
+            "inherits": "macos-base",
+            "cacheVariables": {
+                "MLN_WITH_VULKAN": "ON"
+            }
         }
     ]
 }

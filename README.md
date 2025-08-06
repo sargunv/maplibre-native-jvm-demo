@@ -6,8 +6,8 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 
 | Renderer        | GL ES     | Desktop GL | Vulkan       | Metal |
 | --------------- | --------- | ---------- | ------------ | ----- |
-| macOS arm64     | ❌ (ANGLE) | N/A        | ❌ (MoltenVK) | ✅     |
-| macOS x64       | ❌ (ANGLE) | N/A        | ❌ (MoltenVK) | ❔     |
+| macOS arm64     | ❌ (ANGLE) | N/A        | ✅ (MoltenVK) | ✅     |
+| macOS x64       | ❌ (ANGLE) | N/A        | ❔ (MoltenVK) | ❔     |
 | Linux X11 arm64 | ✅         | ❌          | ✅            | N/A   |
 | Linux X11 x64   | ✅         | ❌          | ✅            | N/A   |
 | Windows arm64   | ⚠️ (ANGLE) | ❌          | ✅            | N/A   |

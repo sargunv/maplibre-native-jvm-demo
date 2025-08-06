@@ -44,6 +44,11 @@ elseif(MLN_WITH_VULKAN)
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/awt_vulkan_backend.cpp
     )
+    if(APPLE)
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/awt_vulkan_backend_macos.mm
+        )
+    endif()
 elseif(MLN_WITH_OPENGL)
     # Common GL backend files
     list(APPEND MAPLIBRE_JNI_SOURCES 
@@ -85,7 +90,7 @@ if(WIN32)
 endif()
 
 # Add Metal-cpp headers for macOS
-if(APPLE)
+if(MLN_WITH_METAL)
     target_include_directories(maplibre-jni PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/vendor/metal-cpp
     )
@@ -142,60 +147,46 @@ if(APPLE)
     target_link_libraries(maplibre-jni PRIVATE 
         "-framework Cocoa"
         "-framework QuartzCore"
-        "-framework Metal"
     )
-else()
-    # Find X11 for window system integration (Linux)
-    if(UNIX)
-        find_package(X11 REQUIRED)
-        target_link_libraries(maplibre-jni PRIVATE ${X11_LIBRARIES})
-        target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
-    endif()
-    
-    if(MLN_WITH_VULKAN)
-        # Find Vulkan library
-        find_package(Vulkan REQUIRED)
-        
-        target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
-        # Don't use system Vulkan headers - use MapLibre's vendored headers for compatibility
-        # The vendored headers are included via the Mapbox::Map target
-    else()
-        # OpenGL backend - choose between WGL and EGL
-        if(MLN_WITH_EGL)
-            # Using EGL backend (ANGLE on Windows, native EGL on Linux)
-            if(WIN32)
-                # On Windows, use ANGLE libraries from vcpkg
-                find_package(unofficial-angle CONFIG REQUIRED)
-                target_link_libraries(maplibre-jni PRIVATE unofficial::angle::libEGL unofficial::angle::libGLESv2)
-            else()
-                # On Linux, use system EGL
-                find_library(EGL_LIBRARY EGL)
-                if(NOT EGL_LIBRARY)
-                    message(FATAL_ERROR "EGL library not found")
-                endif()
-                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
-            endif()
-        else()
-            # Using WGL backend on Windows or EGL on Linux
-            if(WIN32)
-                # WGL uses standard OpenGL
-                find_package(OpenGL REQUIRED)
-                target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
-                
-                if(OpenGL_INCLUDE_DIR)
-                    target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
-                endif()
-            else()
-                # Linux always uses EGL
-                find_library(EGL_LIBRARY EGL)
-                if(NOT EGL_LIBRARY)
-                    message(FATAL_ERROR "EGL library not found")
-                endif()
-                target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
-            endif()
-        endif()
-    endif()
 endif()
+
+if (MLN_WITH_METAL)
+    target_link_libraries(maplibre-jni PRIVATE "-framework Metal")
+endif()
+
+if(UNIX AND NOT APPLE)
+    find_package(X11 REQUIRED)
+    target_link_libraries(maplibre-jni PRIVATE ${X11_LIBRARIES})
+    target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
+endif()
+
+if(MLN_WITH_VULKAN)
+    # Find Vulkan library
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
+    # Don't use system Vulkan headers - use MapLibre's vendored headers for compatibility
+    # The vendored headers are included via the Mapbox::Map target
+endif()
+
+if(MLN_WITH_OPENGL AND MLN_WITH_EGL)
+    if(WIN32)
+        # On Windows, use ANGLE libraries from vcpkg
+        find_package(unofficial-angle CONFIG REQUIRED)
+        target_link_libraries(maplibre-jni PRIVATE unofficial::angle::libEGL unofficial::angle::libGLESv2)
+    else()
+        # On Linux, use system EGL
+        find_library(EGL_LIBRARY EGL)
+        if(NOT EGL_LIBRARY)
+            message(FATAL_ERROR "EGL library not found")
+        endif()
+        target_link_libraries(maplibre-jni PRIVATE ${EGL_LIBRARY})
+    endif()
+elseif(MLN_WITH_OPENGL)
+    find_package(OpenGL REQUIRED)
+    target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
+    target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+endif()
+
 
 # Set output directory
 set_target_properties(maplibre-jni PROPERTIES

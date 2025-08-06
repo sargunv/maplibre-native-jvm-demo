@@ -74,3 +74,27 @@ tasks.named("processResources") {
 tasks.named("processTestResources") {
     dependsOn("copyNativeLibrary")
 }
+
+// Configure run task to include Homebrew library paths on macOS
+tasks.named<JavaExec>("run") {
+    if (OperatingSystem.current().isMacOsX) {
+        // Detect Homebrew path based on architecture
+        val homebrewPath = if (System.getProperty("os.arch") == "aarch64") {
+            "/opt/homebrew"
+        } else {
+            "/usr/local"
+        }
+        
+        // Use DYLD_FALLBACK_LIBRARY_PATH to avoid conflicts with system libraries
+        val existingPath = System.getenv("DYLD_FALLBACK_LIBRARY_PATH") ?: "/usr/local/lib:/usr/lib"
+        val vulkanSdkPath = System.getenv("VULKAN_SDK")?.let { "$it/lib" } ?: ""
+        
+        val paths = listOf(
+            "$homebrewPath/lib",
+            vulkanSdkPath,
+            existingPath
+        ).filter { it.isNotEmpty() }.joinToString(":")
+        
+        environment("DYLD_FALLBACK_LIBRARY_PATH", paths)
+    }
+}
