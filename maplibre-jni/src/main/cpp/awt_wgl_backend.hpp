@@ -30,8 +30,6 @@ namespace maplibre_jni
 
     public:
         void swapBuffers();
-        void setFramebufferBinding(uint32_t fbo) { assumeFramebufferBinding(fbo); }
-        void setViewport(int32_t x, int32_t y, const mbgl::Size &size) { assumeViewport(x, y, size); }
 
     private:
         void setupWGLContext(JNIEnv *env, jobject canvas);
