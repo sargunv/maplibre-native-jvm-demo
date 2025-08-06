@@ -1,17 +1,17 @@
 # kotlin-maplibre-native
 
-MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends (Metal on macOS, OpenGL/Vulkan on Linux, OpenGL on Windows).
+MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends.
 
 ### Platform support
 
-| Renderer        | OpenGL ES | OpenGL  | Vulkan       | Metal |
-| --------------- | --------- | ------- | ------------ | ----- |
-| macOS arm64     | ❌         | N/A     | ❌ (MoltenVK) | ✅     |
-| macOS x64       | ❌         | N/A     | ❌ (MoltenVK) | ❔     |
-| Linux X11 arm64 | ✅         | ❌       | ✅            | N/A   |
-| Linux X11 x64   | ✅         | ❌       | ✅            | N/A   |
-| Windows arm64   | ⚠️ (ANGLE) | N/A     | ❌            | N/A   |
-| Windows x64     | ✅ (ANGLE) | ✅ (WGL) | ❌            | N/A   |
+| Renderer        | GL ES     | Desktop GL | Vulkan       | Metal |
+| --------------- | --------- | ---------- | ------------ | ----- |
+| macOS arm64     | ❌ (ANGLE) | N/A        | ❌ (MoltenVK) | ✅     |
+| macOS x64       | ❌ (ANGLE) | N/A        | ❌ (MoltenVK) | ❔     |
+| Linux X11 arm64 | ✅         | ❌          | ✅            | N/A   |
+| Linux X11 x64   | ✅         | ❌          | ✅            | N/A   |
+| Windows arm64   | ⚠️ (ANGLE) | ❌          | ✅            | N/A   |
+| Windows x64     | ✅ (ANGLE) | ✅          | ✅            | N/A   |
 
 ❔ = Implemented but not tested  
 ⚠️ = Implemented but doesn't work

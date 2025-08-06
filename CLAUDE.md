@@ -19,7 +19,6 @@ Uses CMake to build MapLibre from source with custom JNI code:
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
-- ✅ **Cross-platform JAWT integration**: Unified AwtCanvasRenderer with platform-specific backends
 - ✅ **Native OpenGL backend on Linux**: OpenGL ES 2.0 rendering via EGL
 - ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface (optional)
 - ✅ **Native OpenGL backend on Windows x64**: OpenGL 3.0 rendering via WGL
@@ -112,15 +111,6 @@ open class NativeObject internal constructor(
 }
 ```
 
-## Build Requirements
-- C++ compiler with C++20 support
-- Java Development Kit (JDK 11+)
-- CMake 3.21+
-- Platform-specific:
-  - **macOS**: Metal framework (included with Xcode)
-  - **Linux**: OpenGL/EGL libraries (default) or Vulkan SDK (optional)
-  - **Windows**: OpenGL libraries (opengl32.lib)
-
 ## Project Structure
 ```
 maplibre-jni/
@@ -166,12 +156,6 @@ Implemented native graphics backends for each platform without any translation l
 - **macOS**: Direct Metal backend
 - **Linux**: OpenGL (default) and Vulkan (optional) backends
 - **Windows**: OpenGL backend via WGL
-
-### Implementation Details
-- **No external graphics libraries**: No ANGLE or JOGL dependencies
-- **Native APIs only**: Direct Metal on macOS, OpenGL/EGL or Vulkan on Linux, OpenGL/WGL on Windows
-- **JAWT Integration**: Direct native window handle extraction for all platforms
-- **Factory Pattern**: `createPlatformBackend()` creates appropriate backend per platform
 
 ### Benefits Achieved
 - Native performance without any translation overhead
@@ -219,11 +203,11 @@ Successfully implemented native OpenGL backend for Linux:
 - Use `USE_VULKAN_BACKEND=ON` CMake flag to use Vulkan instead
 - Automatically links against OpenGL and EGL libraries
 
-## Vulkan Backend Implementation Notes (2025-01-04)
+## Vulkan Backend Implementation Notes (2025-01-04, Windows support 2025-01-06)
 
 ### Implementation Status
-Successfully implemented native Vulkan backend for Linux:
-1. X11 surface creation via JAWT
+Successfully implemented native Vulkan backend for Linux and Windows:
+1. Platform-specific surface creation (X11 on Linux, Win32 on Windows)
 2. Proper swapchain management
 3. Integration with MapLibre's Vulkan renderer
 4. Follows GLFW Vulkan backend patterns
@@ -231,9 +215,16 @@ Successfully implemented native Vulkan backend for Linux:
 ### Key Technical Details
 - Vulkan backend inherits from `mbgl::vulkan::RendererBackend` and `mbgl::vulkan::Renderable`
 - VulkanRenderableResource in global namespace (matching GLFW pattern)
-- X11 surface created from JAWT drawable
+- Platform-specific surface creation:
+  - Linux: X11 surface via `vkCreateXlibSurfaceKHR`
+  - Windows: Win32 surface via `vkCreateWin32SurfaceKHR`
 - Immediate JAWT surface release after handle extraction (prevents AWT blocking)
 - Calls `requestSurfaceUpdate()` on resize for swapchain recreation
+
+### Build Configuration
+- Use `MLN_WITH_VULKAN=ON` CMake flag or `windows-vulkan`/`linux-vulkan` presets
+- Uses MapLibre's vendored Vulkan headers for API compatibility
+- Links against system Vulkan library (vulkan-1.dll on Windows, libvulkan.so on Linux)
 
 
 ## Windows ARM64 EGL Backend Implementation Notes (2025-01-06)

@@ -1,22 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 project(maplibre-jni)
 
-# Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Path to generated JNI headers
 set(JNI_HEADERS_DIR "" CACHE PATH "Path to generated JNI headers")
 
-# Enable Objective-C++ on macOS
 if(APPLE)
     enable_language(OBJCXX)
 endif()
 
-# Find JNI
 find_package(JNI REQUIRED)
 
-# Enable position-independent code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Add MapLibre Native
@@ -158,11 +153,12 @@ else()
     endif()
     
     if(MLN_WITH_VULKAN)
-        # Find Vulkan
+        # Find Vulkan library
         find_package(Vulkan REQUIRED)
         
         target_link_libraries(maplibre-jni PRIVATE Vulkan::Vulkan)
-        target_include_directories(maplibre-jni PRIVATE ${Vulkan_INCLUDE_DIRS})
+        # Don't use system Vulkan headers - use MapLibre's vendored headers for compatibility
+        # The vendored headers are included via the Mapbox::Map target
     else()
         # OpenGL backend - choose between WGL and EGL
         if(MLN_WITH_EGL)

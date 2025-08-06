@@ -24,8 +24,8 @@ namespace maplibre_jni
         void setSize(mbgl::Size size);
 
         // Platform-specific getters for surface creation
-        void *getX11Display() const { return x11Display; }
-        unsigned long getX11Window() const { return x11Window; }
+        void *getNativeDisplay() const { return nativeDisplay; }
+        void *getNativeWindow() const { return nativeWindow; }
 
     protected:
         // mbgl::vulkan::RendererBackend overrides
@@ -40,9 +40,9 @@ namespace maplibre_jni
 
         mbgl::Size size;
 
-        // X11 window handles
-        void *x11Display = nullptr;
-        unsigned long x11Window = 0;
+        // Platform-specific native handles
+        void *nativeDisplay = nullptr;
+        void *nativeWindow = nullptr;
 
         // JNI references
         JavaVM *javaVM = nullptr;

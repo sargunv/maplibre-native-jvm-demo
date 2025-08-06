@@ -7,11 +7,15 @@
 
 #include <jawt.h>
 #include <jawt_md.h>
-#include <X11/Xlib.h>
 
 #ifdef __linux__
+#include <X11/Xlib.h>
 #define VK_USE_PLATFORM_XLIB_KHR
 #include <vulkan/vulkan_xlib.h>
+#elif _WIN32
+#include <windows.h>
+#define VK_USE_PLATFORM_WIN32_KHR
+#include <vulkan/vulkan_win32.h>
 #endif
 
 // VulkanRenderableResource must be in global namespace to match GLFW pattern
@@ -24,18 +28,18 @@ public:
 
     void createPlatformSurface() override
     {
-#ifdef __linux__
         auto &backendImpl = static_cast<maplibre_jni::VulkanBackend &>(backend);
 
-        if (!backendImpl.getX11Display() || !backendImpl.getX11Window())
+#ifdef __linux__
+        if (!backendImpl.getNativeDisplay() || !backendImpl.getNativeWindow())
         {
             throw std::runtime_error("X11 display or window not available");
         }
 
         VkXlibSurfaceCreateInfoKHR createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-        createInfo.dpy = static_cast<Display *>(backendImpl.getX11Display());
-        createInfo.window = static_cast<Window>(backendImpl.getX11Window());
+        createInfo.dpy = static_cast<Display *>(backendImpl.getNativeDisplay());
+        createInfo.window = static_cast<Window>(reinterpret_cast<uintptr_t>(backendImpl.getNativeWindow()));
 
         VkSurfaceKHR surface_;
         VkResult result = vkCreateXlibSurfaceKHR(
@@ -55,6 +59,36 @@ public:
                 backendImpl.getInstance().get(), nullptr, backendImpl.getDispatcher()));
 
         mbgl::Log::Info(mbgl::Event::General, "Vulkan X11 surface created successfully");
+
+#elif _WIN32
+        if (!backendImpl.getNativeWindow())
+        {
+            throw std::runtime_error("Win32 window handle not available");
+        }
+
+        VkWin32SurfaceCreateInfoKHR createInfo{};
+        createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+        createInfo.hinstance = GetModuleHandle(NULL);
+        createInfo.hwnd = static_cast<HWND>(backendImpl.getNativeWindow());
+
+        VkSurfaceKHR surface_;
+        VkResult result = vkCreateWin32SurfaceKHR(
+            backendImpl.getInstance().get(),
+            &createInfo,
+            nullptr,
+            &surface_);
+
+        if (result != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create Win32 surface");
+        }
+
+        surface = vk::UniqueSurfaceKHR(
+            surface_,
+            vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic>(
+                backendImpl.getInstance().get(), nullptr, backendImpl.getDispatcher()));
+
+        mbgl::Log::Info(mbgl::Event::General, "Vulkan Win32 surface created successfully");
 #else
         throw std::runtime_error("Platform surface creation not implemented for this platform");
 #endif
@@ -139,10 +173,8 @@ namespace maplibre_jni
         extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
 #ifdef __linux__
-        // Add X11 surface extension
         extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #elif _WIN32
-        // Add Windows surface extension
         extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #endif
 
@@ -189,6 +221,7 @@ namespace maplibre_jni
             return;
         }
 
+        // Platform-specific native handle extraction
 #ifdef __linux__
         // Get the X11 drawing surface info
         JAWT_X11DrawingSurfaceInfo *x11Info = (JAWT_X11DrawingSurfaceInfo *)dsi->platformInfo;
@@ -202,11 +235,30 @@ namespace maplibre_jni
         }
 
         // Store X11 window handles
-        x11Display = x11Info->display;
-        x11Window = x11Info->drawable;
+        nativeDisplay = x11Info->display;
+        nativeWindow = reinterpret_cast<void *>(x11Info->drawable);
 
         mbgl::Log::Info(mbgl::Event::General,
                         "JAWT X11 surface extracted successfully");
+
+#elif _WIN32
+        // Get the Windows drawing surface info
+        JAWT_Win32DrawingSurfaceInfo *win32Info = (JAWT_Win32DrawingSurfaceInfo *)dsi->platformInfo;
+        if (!win32Info)
+        {
+            mbgl::Log::Error(mbgl::Event::General, "Platform info is null");
+            ds->FreeDrawingSurfaceInfo(dsi);
+            ds->Unlock(ds);
+            awt.FreeDrawingSurface(ds);
+            return;
+        }
+
+        // Store native handles for Vulkan
+        nativeWindow = win32Info->hwnd;
+        nativeDisplay = nullptr; // Not needed for Vulkan on Windows
+
+        mbgl::Log::Info(mbgl::Event::General,
+                        "JAWT Win32 surface extracted successfully");
 #endif
 
         // We must unlock the surface immediately after getting the handles
