@@ -48,6 +48,7 @@ tasks.register<Exec>("configureCMake") {
 }
 
 tasks.register<Exec>("build") {
+    dependsOn("configureCMake")
     val preset = getPreset()
     
     val buildDir = layout.buildDirectory.dir("cmake/${preset}").get().asFile
