@@ -8,11 +8,13 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 | --------------- | --------- | ---------- | ------------ | ----- |
 | macOS arm64     | ❌ (ANGLE) | N/A        | ✅ (MoltenVK) | ✅     |
 | macOS x64       | ❌ (ANGLE) | N/A        | ❔ (MoltenVK) | ❔     |
-| Linux X11 arm64 | ✅         | ✅          | ✅            | N/A   |
-| Linux X11 x64   | ✅         | ✅          | ✅            | N/A   |
-| Windows arm64   | ⚠️ (ANGLE) | ❔          | ✅            | N/A   |
-| Windows x64     | ✅ (ANGLE) | ✅          | ✅            | N/A   |
+| Linux X11 arm64 | ✅         | ✅ (GLX)    | ✅            | N/A   |
+| Linux X11 x64   | ✅         | ✅ (GLX)    | ✅            | N/A   |
+| Windows arm64   | ⚠️ (ANGLE) | ❔ (WGL)    | ✅            | N/A   |
+| Windows x64     | ✅ (ANGLE) | ✅ (WGL)    | ✅            | N/A   |
 
+❌ = Not implemented
+✅ = Implemented and working
 ❔ = Implemented but not tested  
 ⚠️ = Implemented but has issues (see notes below)
 
