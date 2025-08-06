@@ -9,10 +9,8 @@
 #include "awt_metal_backend.hpp"
 #elif USE_VULKAN_BACKEND
 #include "awt_vulkan_backend.hpp"
-#elif USE_EGL_BACKEND
-#include "awt_egl_backend.hpp"
-#elif USE_WGL_BACKEND
-#include "awt_wgl_backend.hpp"
+#elif USE_EGL_BACKEND || USE_WGL_BACKEND
+#include "awt_gl_backend.hpp"
 #endif
 
 namespace maplibre_jni
@@ -21,10 +19,8 @@ namespace maplibre_jni
     using PlatformBackend = MetalBackend;
 #elif USE_VULKAN_BACKEND
     using PlatformBackend = VulkanBackend;
-#elif USE_EGL_BACKEND
-    using PlatformBackend = EGLBackend;
-#elif USE_WGL_BACKEND
-    using PlatformBackend = WGLBackend;
+#elif USE_EGL_BACKEND || USE_WGL_BACKEND
+    using PlatformBackend = GLBackend;
 #endif
 
     std::unique_ptr<PlatformBackend> createPlatformBackend(

@@ -1,22 +1,22 @@
 #pragma once
 
-#ifdef USE_WGL_BACKEND
-
 #include <mbgl/gl/renderer_backend.hpp>
 #include <mbgl/gfx/renderable.hpp>
 #include <mbgl/util/size.hpp>
 #include <jni.h>
-#include <windows.h>
+#include <memory>
 
 namespace maplibre_jni
 {
+    class GLContextStrategy;
 
-    class WGLBackend : public mbgl::gl::RendererBackend,
-                       public mbgl::gfx::Renderable
+    class GLBackend : public mbgl::gl::RendererBackend,
+                      public mbgl::gfx::Renderable
     {
     public:
-        WGLBackend(JNIEnv *env, jobject canvas, int width, int height);
-        ~WGLBackend() override;
+        GLBackend(JNIEnv *env, jobject canvas, int width, int height,
+                  std::unique_ptr<GLContextStrategy> strategy);
+        ~GLBackend() override;
 
         mbgl::gfx::Renderable &getDefaultRenderable() override;
         void setSize(mbgl::Size size);
@@ -32,20 +32,12 @@ namespace maplibre_jni
         void swapBuffers();
 
     private:
-        void setupWGLContext(JNIEnv *env, jobject canvas);
-        void destroyWGLContext();
         JNIEnv *getEnv();
 
         JavaVM *javaVM = nullptr;
         jobject canvasRef = nullptr;
         mbgl::Size size;
-
-        // Windows-specific WGL handles
-        HWND hwnd = nullptr;
-        HDC hdc = nullptr;
-        HGLRC hglrc = nullptr;
+        std::unique_ptr<GLContextStrategy> contextStrategy;
     };
 
 } // namespace maplibre_jni
-
-#endif // USE_WGL_BACKEND

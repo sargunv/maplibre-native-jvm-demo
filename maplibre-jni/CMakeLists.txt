@@ -49,14 +49,22 @@ elseif(MLN_WITH_VULKAN)
     list(APPEND MAPLIBRE_JNI_SOURCES 
         src/main/cpp/awt_vulkan_backend.cpp
     )
-elseif(MLN_WITH_OPENGL AND MLN_WITH_EGL)
+elseif(MLN_WITH_OPENGL)
+    # Common GL backend files
     list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_egl_backend.cpp
+        src/main/cpp/awt_gl_backend.cpp
+        src/main/cpp/gl_context_strategy.hpp
     )
-elseif(WIN32 AND MLN_WITH_OPENGL)
-    list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_wgl_backend.cpp
-    )
+    
+    if(MLN_WITH_EGL)
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/egl_context_strategy.cpp
+        )
+    elseif(WIN32)
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/wgl_context_strategy.cpp
+        )
+    endif()
 else()
     message(FATAL_ERROR "Unsupported backend configuration.")
 endif()

@@ -1,127 +1,20 @@
-#ifdef USE_WGL_BACKEND
+#ifdef _WIN32
 
-#include "awt_wgl_backend.hpp"
-#include <mbgl/gl/context.hpp>
-#include <mbgl/gl/renderable_resource.hpp>
+#include "wgl_context_strategy.hpp"
+#include <gl_functions_wgl.h>
 #include <mbgl/util/logging.hpp>
-
 #include <jawt.h>
 #include <jawt_md.h>
 
-#include "gl_functions_wgl.h"
-
-// Forward declaration
-namespace maplibre_jni
-{
-    class WGLBackend;
-}
-
-// WGLRenderableResource in global namespace to match GLFW pattern
-class WGLRenderableResource final : public mbgl::gl::RenderableResource
-{
-public:
-    explicit WGLRenderableResource(maplibre_jni::WGLBackend &backend_)
-        : backend(backend_) {}
-
-    void bind() override;
-    void swap() override;
-
-private:
-    maplibre_jni::WGLBackend &backend;
-};
-
 namespace maplibre_jni
 {
 
-    WGLBackend::WGLBackend(JNIEnv *env, jobject canvas, int width, int height)
-        : mbgl::gl::RendererBackend(mbgl::gfx::ContextMode::Unique),
-          mbgl::gfx::Renderable(
-              mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)},
-              std::make_unique<WGLRenderableResource>(*this)),
-          size({static_cast<uint32_t>(width), static_cast<uint32_t>(height)})
+    WGLContextStrategy::~WGLContextStrategy()
     {
-        env->GetJavaVM(&javaVM);
-        canvasRef = env->NewGlobalRef(canvas);
-        setupWGLContext(env, canvas);
+        destroy();
     }
 
-    WGLBackend::~WGLBackend()
-    {
-        destroyWGLContext();
-
-        if (canvasRef)
-        {
-            JNIEnv *env = getEnv();
-            if (env)
-            {
-                env->DeleteGlobalRef(canvasRef);
-            }
-            canvasRef = nullptr;
-        }
-    }
-
-    mbgl::gfx::Renderable &WGLBackend::getDefaultRenderable()
-    {
-        return *this;
-    }
-
-    void WGLBackend::setSize(mbgl::Size newSize)
-    {
-        // Update both our local size and the Renderable's size
-        size = newSize;
-        this->mbgl::gfx::Renderable::size = newSize;
-    }
-
-    void WGLBackend::activate()
-    {
-        if (hdc && hglrc)
-        {
-            if (!wglMakeCurrent(hdc, hglrc))
-            {
-                mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make WGL context current");
-            }
-        }
-    }
-
-    void WGLBackend::deactivate()
-    {
-        if (hdc)
-        {
-            wglMakeCurrent(nullptr, nullptr);
-        }
-    }
-
-    mbgl::gl::ProcAddress WGLBackend::getExtensionFunctionPointer(const char *name)
-    {
-        return reinterpret_cast<mbgl::gl::ProcAddress>(wgl_GetProcAddress(name));
-    }
-
-    void WGLBackend::updateAssumedState()
-    {
-        // Reset GL state assumptions
-        assumeFramebufferBinding(0);
-        setViewport(0, 0, size);
-    }
-
-    void WGLBackend::swapBuffers()
-    {
-        if (hdc)
-        {
-            SwapBuffers(hdc);
-        }
-    }
-
-    JNIEnv *WGLBackend::getEnv()
-    {
-        JNIEnv *env = nullptr;
-        if (javaVM)
-        {
-            javaVM->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-        }
-        return env;
-    }
-
-    void WGLBackend::setupWGLContext(JNIEnv *env, jobject canvas)
+    void WGLContextStrategy::create(JNIEnv *env, jobject canvas)
     {
         // Get JAWT
         JAWT awt;
@@ -265,7 +158,7 @@ namespace maplibre_jni
         mbgl::Log::Info(mbgl::Event::OpenGL, "WGL context created successfully");
     }
 
-    void WGLBackend::destroyWGLContext()
+    void WGLContextStrategy::destroy()
     {
         if (hglrc)
         {
@@ -281,17 +174,38 @@ namespace maplibre_jni
         }
     }
 
+    void WGLContextStrategy::makeCurrent()
+    {
+        if (hdc && hglrc)
+        {
+            if (!wglMakeCurrent(hdc, hglrc))
+            {
+                mbgl::Log::Error(mbgl::Event::OpenGL, "Failed to make WGL context current");
+            }
+        }
+    }
+
+    void WGLContextStrategy::releaseCurrent()
+    {
+        if (hdc)
+        {
+            wglMakeCurrent(nullptr, nullptr);
+        }
+    }
+
+    void WGLContextStrategy::swapBuffers()
+    {
+        if (hdc)
+        {
+            SwapBuffers(hdc);
+        }
+    }
+
+    void *WGLContextStrategy::getProcAddress(const char *name)
+    {
+        return reinterpret_cast<void *>(wgl_GetProcAddress(name));
+    }
+
 } // namespace maplibre_jni
 
-void WGLRenderableResource::bind()
-{
-    backend.setFramebufferBinding(0);
-    backend.setViewport(0, 0, backend.getSize());
-}
-
-void WGLRenderableResource::swap()
-{
-    backend.swapBuffers();
-}
-
-#endif // USE_WGL_BACKEND
+#endif // _WIN32
