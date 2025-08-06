@@ -4,23 +4,26 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 
 ### Platform support
 
-| Renderer        | GL ES     | Desktop GL | Vulkan       | Metal |
-| --------------- | --------- | ---------- | ------------ | ----- |
-| macOS arm64     | ❌ (ANGLE) | N/A        | ✅ (MoltenVK) | ✅     |
-| macOS x64       | ❌ (ANGLE) | N/A        | ❔ (MoltenVK) | ❔     |
-| Linux X11 arm64 | ✅         | ✅ (GLX)    | ✅            | N/A   |
-| Linux X11 x64   | ✅         | ✅ (GLX)    | ✅            | N/A   |
-| Windows arm64   | ⚠️ (ANGLE) | ❔ (WGL)    | ✅            | N/A   |
-| Windows x64     | ✅ (ANGLE) | ✅ (WGL)    | ✅            | N/A   |
-
 ❌ = Not implemented<br />
 ✅ = Implemented and working<br />
 ❔ = Implemented but not tested <br />
 ⚠️ = Implemented but has issues (see notes below)<br />
 
+| Renderer        | OpenGL ES      | OpenGL | Vulkan        | Metal |
+| --------------- | -------------- | ------ | ------------- | ----- |
+| macOS arm64     | ❌<sup>†</sup> | N/A    | ✅<sup>‡</sup> | ✅    |
+| macOS x64       | ❌<sup>†</sup> | N/A    | ❔<sup>‡</sup> | ❔    |
+| Linux X11 arm64 | ✅             | ✅     | ✅             | N/A   |
+| Linux X11 x64   | ✅             | ✅     | ✅             | N/A   |
+| Windows arm64   | ⚠️<sup>†</sup> | ❔     | ✅             | N/A   |
+| Windows x64     | ✅<sup>†</sup> | ✅     | ✅             | N/A   |
+
+<sup>†</sup>OpenGL ES on macOS and Windows uses ANGLE<br />
+<sup>‡</sup>Vulkan on macOS uses MoltenVK<br />
+
 ### Known issues
 
-- On Windows arm64 with EGL/ANGLE, the app crashes shortly after startup (the map does render though!)
+- On Windows arm64 with OpenGL ES (ANGLE), the app crashes shortly after startup (the map does render though!)
 
 ### What works
 - Complete rendering pipeline with MapLibre Native integration
