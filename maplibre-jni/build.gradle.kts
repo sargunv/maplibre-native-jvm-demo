@@ -1,9 +1,28 @@
 import org.gradle.internal.os.OperatingSystem
 
+fun getPreset(): String {
+    return project.findProperty("cmake.preset") as String? ?: when {
+        OperatingSystem.current().isWindows -> {
+            // Use Vulkan on Windows ARM64, WGL on x64
+            if (System.getProperty("os.arch").contains("aarch64") || System.getProperty("os.arch").contains("arm64")) {
+                "windows-vulkan"
+            } else {
+                "windows-wgl"
+            }
+        }
+        OperatingSystem.current().isLinux -> "linux-egl"
+        OperatingSystem.current().isMacOsX -> "macos-metal"
+        else -> throw GradleException("Unsupported operating system")
+    }
+}
+
 tasks.register<Exec>("configureCMake") {
     dependsOn(":generateKotlinMainJniHeaders")
     
-    val buildDir = layout.buildDirectory.dir("cmake").get().asFile
+    val preset = getPreset()
+
+    // Use preset-specific subdirectory to avoid rebuilding when switching presets
+    val buildDir = layout.buildDirectory.dir("cmake/${preset}").get().asFile
     val jniHeadersDir = layout.buildDirectory.dir("generated/jni-headers/kotlin/main").get().asFile
     
     inputs.file("CMakeLists.txt")
@@ -19,13 +38,6 @@ tasks.register<Exec>("configureCMake") {
     }
     
     workingDir = buildDir
-    
-    val preset = when {
-        OperatingSystem.current().isWindows -> "windows-egl"
-        OperatingSystem.current().isLinux -> "linux-egl"
-        OperatingSystem.current().isMacOsX -> "macos-metal"
-        else -> throw GradleException("Unsupported operating system")
-    }
 
     commandLine(listOf(
         "cmake",
@@ -36,9 +48,9 @@ tasks.register<Exec>("configureCMake") {
 }
 
 tasks.register<Exec>("build") {
-    dependsOn("configureCMake")
+    val preset = getPreset()
     
-    val buildDir = layout.buildDirectory.dir("cmake").get().asFile
+    val buildDir = layout.buildDirectory.dir("cmake/${preset}").get().asFile
     workingDir = buildDir
     
     inputs.files(fileTree("src/main/cpp"))
@@ -54,12 +66,7 @@ tasks.register<Exec>("build") {
 tasks.register<Delete>("clean") {
     delete(layout.buildDirectory.dir("cmake"))
     delete(layout.buildDirectory.dir("lib"))
-    delete(layout.buildDirectory.dir("vscode"))    
-    doLast {
-        project.exec {
-            commandLine("git", "submodule", "foreach", "--recursive", "git reset --hard && git clean -xfd")
-        }
-    }
+    delete(layout.buildDirectory.dir("vscode"))
 }
 
 tasks.withType<Test> {

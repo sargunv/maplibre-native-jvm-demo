@@ -28,9 +28,8 @@ namespace maplibre_jni
 
     private:
         void extractNativeHandles(JNIEnv *env, jobject canvas,
-                                 void *&nativeDisplay, void *&nativeWindow);
+                                  void *&nativeDisplay, void *&nativeWindow);
 
-        // Native window handles
         void *nativeDisplay = nullptr;
         void *nativeWindow = nullptr;
 
