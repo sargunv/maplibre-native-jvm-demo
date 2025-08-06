@@ -1,5 +1,8 @@
 # Development workflow for MapLibre Native JVM bindings
 
+# Use Git Bash on Windows, default bash on other platforms
+set windows-shell := ["C:/Program Files/Git/usr/bin/bash.exe", "-c"]
+
 # Default recipe - show available commands
 default:
     @just --list
