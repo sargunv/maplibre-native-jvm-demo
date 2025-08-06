@@ -83,6 +83,14 @@
             }
         },
         {
+            "name": "linux-glx",
+            "inherits": "linux-base",
+            "cacheVariables": {
+                "MLN_WITH_OPENGL": "ON",
+                "MLN_WITH_EGL": "OFF"
+            }
+        },
+        {
             "name": "linux-vulkan",
             "inherits": "linux-base",
             "cacheVariables": {

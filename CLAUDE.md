@@ -19,7 +19,8 @@ Uses CMake to build MapLibre from source with custom JNI code:
 ### What Works Now
 - ✅ **Complete rendering pipeline**: Map → Frontend → Backend → Native API → Display
 - ✅ **Native Metal backend on macOS**: Direct Metal rendering without translation layers
-- ✅ **Native OpenGL backend on Linux**: OpenGL ES 2.0 rendering via EGL
+- ✅ **Native OpenGL ES backend on Linux**: OpenGL ES 2.0 rendering via EGL
+- ✅ **Native Desktop OpenGL backend on Linux**: OpenGL 3.0 rendering via GLX
 - ✅ **Native Vulkan backend on Linux**: Direct Vulkan rendering via X11 surface (optional)
 - ✅ **Native OpenGL backend on Windows x64**: OpenGL 3.0 rendering via WGL
 - ✅ **Native OpenGL backend on Windows ARM64**: OpenGL ES 2.0 rendering via EGL/ANGLE
@@ -199,9 +200,32 @@ Successfully implemented native OpenGL backend for Linux:
 - Double buffering via `eglSwapBuffers()`
 
 ### Build Configuration
-- Default backend for Linux/Windows (no flag needed)
-- Use `USE_VULKAN_BACKEND=ON` CMake flag to use Vulkan instead
-- Automatically links against OpenGL and EGL libraries
+- EGL backend for Linux: `linux-egl` preset (OpenGL ES via EGL)
+- GLX backend for Linux: `linux-glx` preset (Desktop OpenGL via GLX)
+- Vulkan backend for Linux: `linux-vulkan` preset
+- Automatically links against appropriate libraries (EGL, GLX, or Vulkan)
+
+## GLX Backend Implementation Notes (2025-01-06)
+
+### Implementation Status
+Successfully implemented native GLX backend for Linux as an alternative to EGL:
+1. X11 window handle extraction via JAWT
+2. GLX context creation using GLX_ARB_create_context
+3. Desktop OpenGL 3.0 compatibility profile (same as WGL)
+4. Integration with MapLibre's GL renderer
+5. Follows GLFW GLX patterns
+
+### Key Technical Details
+- GLX backend provides desktop OpenGL instead of OpenGL ES
+- GLXContextStrategy implements platform-specific context management
+- Creates OpenGL 3.0 compatibility profile context (matching WGL)
+- Uses GLX_ARB_create_context extension for context creation
+- Direct GLX API usage without translation layers
+
+### Build Configuration
+- Use `linux-glx` CMake preset for GLX backend
+- Links against OpenGL and GLX libraries
+- Requires X11 development headers
 
 ## Vulkan Backend Implementation Notes (2025-01-04, Windows support 2025-01-06, macOS MoltenVK support 2025-01-06)
 

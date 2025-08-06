@@ -8,17 +8,17 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 | --------------- | --------- | ---------- | ------------ | ----- |
 | macOS arm64     | ❌ (ANGLE) | N/A        | ✅ (MoltenVK) | ✅     |
 | macOS x64       | ❌ (ANGLE) | N/A        | ❔ (MoltenVK) | ❔     |
-| Linux X11 arm64 | ✅         | ❌          | ✅            | N/A   |
-| Linux X11 x64   | ✅         | ❌          | ✅            | N/A   |
+| Linux X11 arm64 | ✅         | ✅          | ✅            | N/A   |
+| Linux X11 x64   | ✅         | ✅          | ✅            | N/A   |
 | Windows arm64   | ⚠️ (ANGLE) | ❔          | ✅            | N/A   |
 | Windows x64     | ✅ (ANGLE) | ✅          | ✅            | N/A   |
 
 ❔ = Implemented but not tested  
-⚠️ = Implemented but doesn't work
+⚠️ = Implemented but has issues (see notes below)
 
 ### Known issues
 
-- On Windows arm64, the app crashes shortly after startup (the map does render though!)
+- On Windows arm64 with EGL/ANGLE, the app crashes shortly after startup (the map does render though!)
 
 ### What works
 - Complete rendering pipeline with MapLibre Native integration
@@ -40,7 +40,8 @@ The project supports multiple graphics backends per platform. Use CMake presets 
 - `./gradlew run -Pcmake.preset=macos-vulkan` - Vulkan via MoltenVK
 
 **Linux:**
-- `./gradlew run -Pcmake.preset=linux-opengl` (default) - OpenGL ES 2.0 via EGL
+- `./gradlew run -Pcmake.preset=linux-egl` (default) - OpenGL ES 2.0 via EGL
+- `./gradlew run -Pcmake.preset=linux-glx` - Desktop OpenGL 3.0 via GLX
 - `./gradlew run -Pcmake.preset=linux-vulkan` - Native Vulkan
 
 **Windows:**

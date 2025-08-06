@@ -64,6 +64,11 @@ elseif(MLN_WITH_OPENGL)
         list(APPEND MAPLIBRE_JNI_SOURCES 
             src/main/cpp/wgl_context_strategy.cpp
         )
+    elseif(UNIX AND NOT APPLE)
+        # Linux with GLX (desktop OpenGL)
+        list(APPEND MAPLIBRE_JNI_SOURCES 
+            src/main/cpp/glx_context_strategy.cpp
+        )
     endif()
 else()
     message(FATAL_ERROR "Unsupported backend configuration.")
@@ -125,6 +130,8 @@ if(MLN_WITH_OPENGL)
         target_compile_definitions(maplibre-jni PRIVATE USE_EGL_BACKEND)
     elseif(WIN32)
         target_compile_definitions(maplibre-jni PRIVATE USE_WGL_BACKEND)
+    elseif(UNIX AND NOT APPLE)
+        target_compile_definitions(maplibre-jni PRIVATE USE_GLX_BACKEND)
     endif()
 endif()
 
@@ -185,6 +192,12 @@ elseif(MLN_WITH_OPENGL)
     find_package(OpenGL REQUIRED)
     target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
     target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+    
+    # Link GLX on Linux when not using EGL
+    if(UNIX AND NOT APPLE AND NOT MLN_WITH_EGL)
+        find_package(OpenGL REQUIRED COMPONENTS GLX)
+        target_link_libraries(maplibre-jni PRIVATE OpenGL::GLX)
+    endif()
 endif()
 
 
