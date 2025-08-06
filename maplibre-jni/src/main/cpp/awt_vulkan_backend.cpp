@@ -16,6 +16,9 @@
 #include <windows.h>
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan_win32.h>
+#elif __APPLE__
+#define VK_USE_PLATFORM_METAL_EXT
+#include <vulkan/vulkan_metal.h>
 #endif
 
 // VulkanRenderableResource must be in global namespace to match GLFW pattern
@@ -30,7 +33,10 @@ public:
     {
         auto &backendImpl = static_cast<maplibre_jni::VulkanBackend &>(backend);
 
-#ifdef __linux__
+#ifdef __APPLE__
+        // Use the macOS-specific surface creation
+        backendImpl.createMacOSSurface(backendImpl.getInstance(), surface);
+#elif __linux__
         if (!backendImpl.getNativeDisplay() || !backendImpl.getNativeWindow())
         {
             throw std::runtime_error("X11 display or window not available");
@@ -89,8 +95,6 @@ public:
                 backendImpl.getInstance().get(), nullptr, backendImpl.getDispatcher()));
 
         mbgl::Log::Info(mbgl::Event::General, "Vulkan Win32 surface created successfully");
-#else
-        throw std::runtime_error("Platform surface creation not implemented for this platform");
 #endif
     }
 
@@ -120,12 +124,19 @@ namespace maplibre_jni
     {
         env->GetJavaVM(&javaVM);
         canvasRef = env->NewGlobalRef(canvas);
+#ifdef __APPLE__
+        setupMacOSLayer(env, canvas);
+#else
         setupVulkanSurface(env, canvas);
+#endif
         init();
     }
 
     VulkanBackend::~VulkanBackend()
     {
+#ifdef __APPLE__
+        cleanupMacOSLayer();
+#endif
         if (canvasRef)
         {
             JNIEnv *env = getEnv();
@@ -147,6 +158,10 @@ namespace maplibre_jni
         // Update both our local size and the Renderable's size
         size = newSize;
         this->mbgl::vulkan::Renderable::size = newSize;
+
+#ifdef __APPLE__
+        updateMacOSLayerSize(newSize);
+#endif
 
         if (context)
         {
@@ -176,6 +191,9 @@ namespace maplibre_jni
         extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #elif _WIN32
         extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif __APPLE__
+        extensions.push_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
+        extensions.push_back("VK_KHR_portability_enumeration");
 #endif
 
         return extensions;
@@ -183,6 +201,7 @@ namespace maplibre_jni
 
     void VulkanBackend::setupVulkanSurface(JNIEnv *env, jobject canvas)
     {
+#ifndef __APPLE__  // This method is not used on macOS
         // Get JAWT
         JAWT awt;
         awt.version = JAWT_VERSION_9;
@@ -266,6 +285,7 @@ namespace maplibre_jni
         ds->FreeDrawingSurfaceInfo(dsi);
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
+#endif  // !__APPLE__
     }
 
 } // namespace maplibre_jni

@@ -27,6 +27,15 @@ namespace maplibre_jni
         void *getNativeDisplay() const { return nativeDisplay; }
         void *getNativeWindow() const { return nativeWindow; }
 
+#ifdef __APPLE__
+        // macOS-specific methods for MoltenVK
+        void setupMacOSLayer(JNIEnv *env, jobject canvas);
+        void cleanupMacOSLayer();
+        void updateMacOSLayerSize(mbgl::Size newSize);
+        void* getMetalLayer();
+        void createMacOSSurface(const vk::UniqueInstance& instance, vk::UniqueSurfaceKHR& surface);
+#endif
+
     protected:
         // mbgl::vulkan::RendererBackend overrides
         void activate() override {}

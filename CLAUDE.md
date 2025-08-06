@@ -203,11 +203,14 @@ Successfully implemented native OpenGL backend for Linux:
 - Use `USE_VULKAN_BACKEND=ON` CMake flag to use Vulkan instead
 - Automatically links against OpenGL and EGL libraries
 
-## Vulkan Backend Implementation Notes (2025-01-04, Windows support 2025-01-06)
+## Vulkan Backend Implementation Notes (2025-01-04, Windows support 2025-01-06, macOS MoltenVK support 2025-01-06)
 
 ### Implementation Status
-Successfully implemented native Vulkan backend for Linux and Windows:
-1. Platform-specific surface creation (X11 on Linux, Win32 on Windows)
+Successfully implemented native Vulkan backend for Linux, Windows, and macOS:
+1. Platform-specific surface creation:
+   - Linux: X11 surface via `vkCreateXlibSurfaceKHR`
+   - Windows: Win32 surface via `vkCreateWin32SurfaceKHR`
+   - macOS: Metal surface via `vkCreateMetalSurfaceEXT` (MoltenVK)
 2. Proper swapchain management
 3. Integration with MapLibre's Vulkan renderer
 4. Follows GLFW Vulkan backend patterns
@@ -215,16 +218,28 @@ Successfully implemented native Vulkan backend for Linux and Windows:
 ### Key Technical Details
 - Vulkan backend inherits from `mbgl::vulkan::RendererBackend` and `mbgl::vulkan::Renderable`
 - VulkanRenderableResource in global namespace (matching GLFW pattern)
-- Platform-specific surface creation:
-  - Linux: X11 surface via `vkCreateXlibSurfaceKHR`
-  - Windows: Win32 surface via `vkCreateWin32SurfaceKHR`
+- Platform-specific surface creation handled through conditional compilation
 - Immediate JAWT surface release after handle extraction (prevents AWT blocking)
 - Calls `requestSurfaceUpdate()` on resize for swapchain recreation
 
+### macOS MoltenVK Implementation (2025-01-06)
+- Uses MoltenVK to translate Vulkan API calls to Metal
+- Creates CAMetalLayer from JAWT surface (similar to Metal backend)
+- Uses VK_EXT_metal_surface extension for surface creation
+- Requires VK_KHR_portability_enumeration and VK_KHR_portability_subset extensions
+- CAMetalLayer configuration matches Metal backend (frame, contentsScale, pixelFormat)
+- Implemented in awt_vulkan_backend_macos.mm for Objective-C++ integration
+
 ### Build Configuration
-- Use `MLN_WITH_VULKAN=ON` CMake flag or `windows-vulkan`/`linux-vulkan` presets
+- Use `MLN_WITH_VULKAN=ON` CMake flag or platform-specific presets:
+  - Linux: `linux-vulkan` preset
+  - Windows: `windows-vulkan` preset  
+  - macOS: `macos-vulkan` preset (uses MoltenVK)
 - Uses MapLibre's vendored Vulkan headers for API compatibility
-- Links against system Vulkan library (vulkan-1.dll on Windows, libvulkan.so on Linux)
+- Links against system Vulkan library:
+  - Linux: libvulkan.so
+  - Windows: vulkan-1.dll
+  - macOS: MoltenVK via system Vulkan loader
 
 
 ## Windows ARM64 EGL Backend Implementation Notes (2025-01-06)
