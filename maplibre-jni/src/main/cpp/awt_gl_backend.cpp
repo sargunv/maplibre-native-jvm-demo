@@ -115,5 +115,9 @@ void GLRenderableResource::bind()
 
 void GLRenderableResource::swap()
 {
+    const auto& swapBehaviour = backend.getSwapBehavior();
+    if (swapBehaviour == mbgl::gfx::Renderable::SwapBehaviour::Flush) {
+        static_cast<mbgl::gl::Context&>(backend.getContext()).finish();
+    }
     backend.swapBuffers();
 }

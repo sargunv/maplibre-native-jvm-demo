@@ -2,6 +2,10 @@
 #include "jni_helpers.hpp"
 #include "awt_canvas_renderer.hpp"
 #include "map_observer.hpp"
+
+#if defined(USE_EGL_BACKEND) || defined(USE_WGL_BACKEND)
+#include "awt_gl_backend.hpp"
+#endif
 #include "conversions/size_conversions.hpp"
 #include "conversions/cameraoptions_conversions.hpp"
 #include "conversions/mapoptions_conversions.hpp"
@@ -173,6 +177,29 @@ JNIEXPORT jboolean JNICALL Java_com_maplibre_jni_MaplibreMap_nativeTick
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
         return JNI_FALSE;
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetOpenGLSwapBehavior
+  (JNIEnv* env, jclass, jlong ptr, jboolean flush) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        if (wrapper && wrapper->renderer) {
+#if defined(USE_EGL_BACKEND) || defined(USE_WGL_BACKEND)
+            // Only applies to OpenGL backends
+            auto* backend = dynamic_cast<maplibre_jni::GLBackend*>(
+                wrapper->renderer->getRendererBackend());
+            if (backend) {
+                backend->setSwapBehavior(flush ? mbgl::gfx::Renderable::SwapBehaviour::Flush 
+                                               : mbgl::gfx::Renderable::SwapBehaviour::NoFlush);
+            }
+#else
+            // No-op for Metal and Vulkan
+            (void)flush;
+#endif
+        }
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
     }
 }
 

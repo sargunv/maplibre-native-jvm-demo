@@ -52,6 +52,15 @@ class MaplibreMap(
     fun tick(): Boolean {
         return nativeTick(nativePtr)
     }
+    
+    /**
+     * Sets the OpenGL swap behavior (has no effect on Metal/Vulkan backends).
+     * @param flush If true, waits for GPU to complete all commands (glFinish).
+     *              If false, returns immediately after swap (default, better performance).
+     */
+    fun setOpenGLSwapBehavior(flush: Boolean) {
+        nativeSetOpenGLSwapBehavior(nativePtr, flush)
+    }
 
     /**
      * Triggers a repaint of the map.
@@ -222,6 +231,9 @@ class MaplibreMap(
 
         @JvmStatic
         private external fun nativeTick(ptr: Long): Boolean
+        
+        @JvmStatic
+        private external fun nativeSetOpenGLSwapBehavior(ptr: Long, flush: Boolean)
 
         @JvmStatic
         private external fun nativeMoveBy(ptr: Long, screenCoordinate: ScreenCoordinate)

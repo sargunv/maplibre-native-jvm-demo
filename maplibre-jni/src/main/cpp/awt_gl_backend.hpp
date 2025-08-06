@@ -30,6 +30,8 @@ namespace maplibre_jni
 
     public:
         void swapBuffers();
+        mbgl::gfx::Renderable::SwapBehaviour getSwapBehavior() const { return swapBehaviour; }
+        void setSwapBehavior(mbgl::gfx::Renderable::SwapBehaviour behaviour) { swapBehaviour = behaviour; }
 
     private:
         JNIEnv *getEnv();
@@ -38,6 +40,7 @@ namespace maplibre_jni
         jobject canvasRef = nullptr;
         mbgl::Size size;
         std::unique_ptr<GLContextStrategy> contextStrategy;
+        mbgl::gfx::Renderable::SwapBehaviour swapBehaviour = mbgl::gfx::Renderable::SwapBehaviour::NoFlush;
     };
 
 } // namespace maplibre_jni
