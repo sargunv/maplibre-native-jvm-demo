@@ -28,7 +28,6 @@ tasks.register<Exec>("configureCMake") {
     inputs.file("CMakeLists.txt")
     inputs.dir("src/main/cpp")
     inputs.dir(jniHeadersDir)
-    inputs.dir("../vendor/maplibre-native")
     
     outputs.dir(buildDir)
     outputs.file(buildDir.resolve("CMakeCache.txt"))

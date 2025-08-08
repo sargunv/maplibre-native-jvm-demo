@@ -14,8 +14,81 @@ find_package(JNI REQUIRED)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Add MapLibre Native
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native maplibre-native)
+# FetchContent for downloading MapLibre prebuilt libraries
+include(FetchContent)
+
+# MapLibre version to use
+set(MAPLIBRE_VERSION "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c")
+set(MAPLIBRE_BASE_URL "https://github.com/maplibre/maplibre-native/releases/download/${MAPLIBRE_VERSION}")
+
+# Download headers (common for all platforms)
+FetchContent_Declare(
+    maplibre_headers
+    URL ${MAPLIBRE_BASE_URL}/maplibre-native-headers.tar.gz
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/maplibre-headers
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
+# Platform-specific library selection
+if(APPLE)
+    if(MLN_WITH_METAL)
+        set(MAPLIBRE_LIB_NAME "libmaplibre-native-core-macos-arm64-metal.a")
+    else()
+        message(FATAL_ERROR "Only Metal backend is supported for macOS prebuilt libraries")
+    endif()
+elseif(WIN32)
+    if(MLN_WITH_VULKAN)
+        set(MAPLIBRE_LIB_NAME "maplibre-native-core-windows-x64-vulkan.lib")
+    elseif(MLN_WITH_EGL)
+        set(MAPLIBRE_LIB_NAME "maplibre-native-core-windows-x64-egl.lib")
+    else()
+        set(MAPLIBRE_LIB_NAME "maplibre-native-core-windows-x64-opengl.lib")
+    endif()
+elseif(UNIX)
+    # Detect architecture
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        set(ARCH_SUFFIX "arm64")
+    else()
+        set(ARCH_SUFFIX "x64")
+    endif()
+    
+    if(MLN_WITH_VULKAN)
+        set(MAPLIBRE_LIB_NAME "libmaplibre-native-core-linux-${ARCH_SUFFIX}-vulkan.a")
+    else()
+        set(MAPLIBRE_LIB_NAME "libmaplibre-native-core-linux-${ARCH_SUFFIX}-opengl.a")
+    endif()
+else()
+    message(FATAL_ERROR "Unsupported platform")
+endif()
+
+# Download the platform-specific library
+FetchContent_Declare(
+    maplibre_lib
+    URL ${MAPLIBRE_BASE_URL}/${MAPLIBRE_LIB_NAME}
+    DOWNLOAD_NO_EXTRACT TRUE
+    DOWNLOAD_DIR ${CMAKE_BINARY_DIR}/_deps/maplibre-lib
+)
+
+# Make both available
+FetchContent_MakeAvailable(maplibre_headers maplibre_lib)
+
+# Get the downloaded library path
+FetchContent_GetProperties(maplibre_lib)
+set(MAPLIBRE_LIB_PATH ${CMAKE_BINARY_DIR}/_deps/maplibre-lib/${MAPLIBRE_LIB_NAME})
+
+# Create imported target for MapLibre
+add_library(Mapbox::Map STATIC IMPORTED GLOBAL)
+set_target_properties(Mapbox::Map PROPERTIES
+    IMPORTED_LOCATION ${MAPLIBRE_LIB_PATH}
+)
+
+# Set include directories for the imported target
+target_include_directories(Mapbox::Map INTERFACE
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/deps/geometry.hpp/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/deps/variant/include
+)
 
 # Create our JNI library
 set(MAPLIBRE_JNI_SOURCES
@@ -81,34 +154,36 @@ target_include_directories(maplibre-jni PRIVATE
     ${JNI_INCLUDE_DIRS}
     ${JNI_HEADERS_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/default/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/src
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/include
 )
 
 # Add Windows-specific includes
 if(WIN32)
-    target_include_directories(maplibre-jni PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/vendor/vcpkg/installed/x64-windows/include
-    )
+    # Windows platform headers would be needed here if available in tarball
+    # Note: vcpkg dependencies would need to be handled separately if needed
 endif()
 
 # Add Metal-cpp headers for macOS
 if(MLN_WITH_METAL)
+    # Download metal-cpp headers separately since they're not in the tarball
+    FetchContent_Declare(
+        metal_cpp
+        GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
+        GIT_TAG metal-cpp_macOS15.2_iOS18.2
+        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/metal-cpp
+    )
+    FetchContent_MakeAvailable(metal_cpp)
+    
     target_include_directories(maplibre-jni PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/vendor/metal-cpp
+        ${CMAKE_BINARY_DIR}/_deps/metal-cpp
     )
 endif()
 
-
-# Compile options (will inherit from mbgl-compiler-options)
 target_compile_options(maplibre-jni PRIVATE
     -frtti
     -fexceptions
 )
 
-# Windows-specific definitions
 if(WIN32)
     target_compile_definitions(maplibre-jni PRIVATE
         NOMINMAX  # Prevent min/max macro conflicts
@@ -116,11 +191,11 @@ if(WIN32)
 endif()
 
 # Pass backend selection to C++ code
+
 if(MLN_WITH_METAL)
     target_compile_definitions(maplibre-jni PRIVATE USE_METAL_BACKEND)
 endif()
 
-# Pass backend selection to C++ code
 if(MLN_WITH_VULKAN)
     target_compile_definitions(maplibre-jni PRIVATE USE_VULKAN_BACKEND)
 endif()
@@ -139,8 +214,6 @@ endif()
 target_link_libraries(maplibre-jni
     PRIVATE
         Mapbox::Map
-        mbgl-compiler-options
-        mbgl-vendor-unique_resource
         ${JNI_LIBRARIES}
 )
 
