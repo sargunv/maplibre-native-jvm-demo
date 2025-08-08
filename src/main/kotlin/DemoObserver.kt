@@ -2,15 +2,6 @@ import com.maplibre.jni.MapLoadError
 import com.maplibre.jni.MapObserver
 
 class DemoObserver : MapObserver {
-  override fun onCameraWillChange(mode: MapObserver.CameraChangeMode) {
-  }
-
-  override fun onCameraIsChanging() {
-  }
-
-  override fun onCameraDidChange(mode: MapObserver.CameraChangeMode) {
-  }
-
   override fun onWillStartLoadingMap() {
     println("Will start loading map")
   }
@@ -24,16 +15,6 @@ class DemoObserver : MapObserver {
       message: String
   ) {
     println("❌ Map loading failed: $error - $message")
-  }
-
-  override fun onStyleImageMissing(imageId: String) {
-    println("Style image missing: $imageId")
-  }
-
-  override fun onWillStartRenderingFrame() {
-  }
-
-  override fun onDidFinishRenderingFrame(status: MapObserver.RenderFrameStatus) {
   }
 
   override fun onWillStartRenderingMap() {

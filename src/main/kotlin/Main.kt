@@ -33,7 +33,11 @@ fun main() {
       ),
       frameRate = 120,
       onMapReady = { map, canvas ->
-        map.loadStyleURL("https://tiles.openfreemap.org/styles/bright")
+        // Load default style
+        val defaultStyle = DemoStyle.DEFAULT
+        println("Loading initial style: ${defaultStyle.styleName}")
+        map.loadStyleURL(defaultStyle.url)
+        
         map.flyTo(
           CameraOptions(
             center = LatLng(37.7749, -122.4194), // San Francisco coordinates
@@ -43,8 +47,17 @@ fun main() {
           )
         )
 
-        // Enable user interactions
-        MapInteractionHandler(canvas, map).enable()
+        // Enable demo keyboard handler with style switching
+        val keyboardHandler = DemoKeyboardHandler(canvas, map)
+        keyboardHandler.enable()
+        
+        // Print available keyboard shortcuts
+        println("\nKeyboard shortcuts:")
+        println("  Arrow keys: Pan the map")
+        println("  +/-: Zoom in/out")
+        println("  S: Cycle through map styles")
+        println("  X: Reset to default view")
+        println("  A: Fly through world locations")
       }
     )
 

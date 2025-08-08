@@ -9,16 +9,16 @@ MapLibre Native JVM bindings for desktop platforms. This project enables MapLibr
 ❔ = Implemented but not tested <br />
 ⚠️ = Implemented but has issues (see notes below)<br />
 
-| Renderer        | OpenGL ES      | OpenGL | Vulkan        | Metal |
-| --------------- | -------------- | ------ | ------------- | ----- |
-| macOS arm64     | ❌<sup>†</sup> | N/A    | ✅<sup>‡</sup> | ✅    |
-| macOS x64       | ❌<sup>†</sup> | N/A    | ❔<sup>‡</sup> | ❔    |
-| Linux X11 arm64 | ✅             | ✅     | ✅             | N/A   |
-| Linux X11 x64   | ✅             | ✅     | ✅             | N/A   |
-| Windows arm64   | ⚠️<sup>†</sup> | ❔     | ✅             | N/A   |
-| Windows x64     | ✅<sup>†</sup> | ✅     | ✅             | N/A   |
+| Renderer        | OpenGL ES     | OpenGL | Vulkan        | Metal |
+| --------------- | ------------- | ------ | ------------- | ----- |
+| macOS arm64     | ❌<sup>†</sup> | N/A    | ✅<sup>‡</sup> | ✅     |
+| macOS x64       | ❌<sup>†</sup> | N/A    | ❔<sup>‡</sup> | ❔     |
+| Linux X11 arm64 | ✅             | ✅      | ✅             | N/A   |
+| Linux X11 x64   | ✅             | ✅      | ✅             | N/A   |
+| Windows arm64   | ⚠️<sup>†</sup> | ❔      | ✅             | N/A   |
+| Windows x64     | ✅<sup>†</sup> | ✅      | ✅             | N/A   |
 
-<sup>†</sup>OpenGL ES on macOS and Windows uses ANGLE<br />
+<sup>†</sup>OpenGL ES on non-Linux platforms uses ANGLE<br />
 <sup>‡</sup>Vulkan on macOS uses MoltenVK<br />
 
 ### Known issues

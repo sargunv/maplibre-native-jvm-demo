@@ -22,7 +22,6 @@ import kotlin.math.exp
  * Keyboard controls:
  * - Arrow keys: Pan the map
  * - +/- or =/- keys: Zoom in/out
- * - N: Reset north orientation
  */
 class MapInteractionHandler(
   private val component: Component,
@@ -268,30 +267,67 @@ class MapInteractionHandler(
     if (!enabled || !config.enableKeyboard) return
 
     when (e.keyCode) {
-      // Pan with arrow keys
+      // Pan with arrow keys - animated like zoom
       KeyEvent.VK_LEFT -> {
         if (config.enablePan) {
-          map.moveBy(toMapDelta(50.0 * config.panSpeed, 0.0))
+          val currentCamera = map.getCameraOptions()
+          val pixelRatio = pixelRatio
+          val screenDelta = toMapDelta(100.0 * config.panSpeed, 0.0)
+          val newCenter = map.latLngForPixel(
+            ScreenCoordinate(
+              component.width * pixelRatio / 2.0 - screenDelta.x,
+              component.height * pixelRatio / 2.0
+            )
+          )
+          map.easeTo(currentCamera.copy(center = newCenter), 300)
         }
       }
 
       KeyEvent.VK_RIGHT -> {
         if (config.enablePan) {
-          map.moveBy(toMapDelta(-50.0 * config.panSpeed, 0.0))
+          val currentCamera = map.getCameraOptions()
+          val pixelRatio = pixelRatio
+          val screenDelta = toMapDelta(-100.0 * config.panSpeed, 0.0)
+          val newCenter = map.latLngForPixel(
+            ScreenCoordinate(
+              component.width * pixelRatio / 2.0 - screenDelta.x,
+              component.height * pixelRatio / 2.0
+            )
+          )
+          map.easeTo(currentCamera.copy(center = newCenter), 300)
         }
       }
 
       KeyEvent.VK_UP -> {
         if (config.enablePan) {
-          map.moveBy(toMapDelta(0.0, 50.0 * config.panSpeed))
+          val currentCamera = map.getCameraOptions()
+          val pixelRatio = pixelRatio
+          val screenDelta = toMapDelta(0.0, 100.0 * config.panSpeed)
+          val newCenter = map.latLngForPixel(
+            ScreenCoordinate(
+              component.width * pixelRatio / 2.0,
+              component.height * pixelRatio / 2.0 - screenDelta.y
+            )
+          )
+          map.easeTo(currentCamera.copy(center = newCenter), 300)
         }
       }
 
       KeyEvent.VK_DOWN -> {
         if (config.enablePan) {
-          map.moveBy(toMapDelta(0.0, -50.0 * config.panSpeed))
+          val currentCamera = map.getCameraOptions()
+          val pixelRatio = pixelRatio
+          val screenDelta = toMapDelta(0.0, -100.0 * config.panSpeed)
+          val newCenter = map.latLngForPixel(
+            ScreenCoordinate(
+              component.width * pixelRatio / 2.0,
+              component.height * pixelRatio / 2.0 - screenDelta.y
+            )
+          )
+          map.easeTo(currentCamera.copy(center = newCenter), 300)
         }
       }
+
       // Zoom with +/- keys - animated like double-click
       KeyEvent.VK_PLUS, KeyEvent.VK_EQUALS -> {
         if (config.enableZoom) {
@@ -307,11 +343,6 @@ class MapInteractionHandler(
           val currentZoom = currentCamera.zoom ?: 0.0
           map.easeTo(currentCamera.copy(zoom = currentZoom - 1.0), 300)
         }
-      }
-      // Reset north with N
-      KeyEvent.VK_N -> {
-        val current = map.getCameraOptions()
-        map.easeTo(current.copy(bearing = 0.0), 300)
       }
     }
   }
