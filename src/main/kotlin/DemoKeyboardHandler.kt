@@ -11,6 +11,8 @@ import java.awt.event.KeyListener
  * - S: Cycle through available map styles
  * - X: Reset transform to default view (San Francisco)
  * - A: Fly through predefined locations
+ * - D: Cycle through debug options
+ * - R: Toggle rendering statistics view
  */
 class DemoKeyboardHandler(
     private val component: Component,
@@ -24,6 +26,17 @@ class DemoKeyboardHandler(
     // Demo-specific state
     private var currentStyleIndex = DemoStyle.DEFAULT.ordinal
     private var locationIndex = 0
+    private var currentDebugIndex = 0
+    
+    // Debug options in cycle order (matching GLFW demo)
+    private val debugCycle = listOf(
+        MapDebugOptions.NO_DEBUG,
+        MapDebugOptions.TILE_BORDERS,
+        MapDebugOptions.PARSE_STATUS,
+        MapDebugOptions.TIMESTAMPS,
+        MapDebugOptions.COLLISION,
+        MapDebugOptions.OVERDRAW
+    )
     
     // Predefined locations for fly-through
     private val locations = listOf(
@@ -97,6 +110,21 @@ class DemoKeyboardHandler(
                     )
                 )
                 locationIndex = (locationIndex + 1) % locations.size
+            }
+            
+            KeyEvent.VK_D -> {
+                // Cycle through debug options
+                currentDebugIndex = (currentDebugIndex + 1) % debugCycle.size
+                val debugOption = debugCycle[currentDebugIndex]
+                map.setDebug(debugOption)
+                println("Debug mode: $debugOption")
+            }
+            
+            KeyEvent.VK_R -> {
+                // Toggle rendering statistics view
+                val currentlyEnabled = map.isRenderingStatsViewEnabled()
+                map.enableRenderingStatsView(!currentlyEnabled)
+                println("Rendering stats: ${if (!currentlyEnabled) "ON" else "OFF"}")
             }
         }
     }

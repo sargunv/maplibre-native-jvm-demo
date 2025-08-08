@@ -188,6 +188,38 @@ class MaplibreMap(
         return nativeLatLngForPixel(nativePtr, pixel)
     }
 
+    /**
+     * Sets the debug options for the map.
+     * @param options The debug options to enable
+     */
+    fun setDebug(options: MapDebugOptions) {
+        nativeSetDebug(nativePtr, options.value)
+    }
+    
+    /**
+     * Gets the current debug options.
+     * @return The current debug options
+     */
+    fun getDebug(): MapDebugOptions {
+        return MapDebugOptions(nativeGetDebug(nativePtr))
+    }
+    
+    /**
+     * Enables or disables the rendering statistics view.
+     * @param enabled True to show rendering stats, false to hide
+     */
+    fun enableRenderingStatsView(enabled: Boolean) {
+        nativeEnableRenderingStatsView(nativePtr, enabled)
+    }
+    
+    /**
+     * Checks if the rendering statistics view is enabled.
+     * @return True if rendering stats are shown
+     */
+    fun isRenderingStatsViewEnabled(): Boolean {
+        return nativeIsRenderingStatsViewEnabled(nativePtr)
+    }
+
     companion object {
 
         @JvmStatic
@@ -255,5 +287,17 @@ class MaplibreMap(
 
         @JvmStatic
         private external fun nativeLatLngForPixel(ptr: Long, pixel: ScreenCoordinate): LatLng
+        
+        @JvmStatic
+        private external fun nativeSetDebug(ptr: Long, debugOptions: Int)
+        
+        @JvmStatic
+        private external fun nativeGetDebug(ptr: Long): Int
+        
+        @JvmStatic
+        private external fun nativeEnableRenderingStatsView(ptr: Long, enabled: Boolean)
+        
+        @JvmStatic
+        private external fun nativeIsRenderingStatsViewEnabled(ptr: Long): Boolean
     }
 }

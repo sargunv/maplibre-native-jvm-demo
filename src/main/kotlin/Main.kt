@@ -58,6 +58,8 @@ fun main() {
         println("  S: Cycle through map styles")
         println("  X: Reset to default view")
         println("  A: Fly through world locations")
+        println("  D: Cycle through debug options")
+        println("  R: Toggle rendering statistics")
       }
     )
 

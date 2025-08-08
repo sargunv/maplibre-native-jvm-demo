@@ -15,6 +15,7 @@
 #include "conversions/latlng_conversions.hpp"
 #include <mbgl/map/map.hpp>
 #include <mbgl/map/map_options.hpp>
+#include <mbgl/map/mode.hpp>
 #include <mbgl/storage/resource_options.hpp>
 #include <mbgl/util/client_options.hpp>
 #include <mbgl/map/camera.hpp>
@@ -284,6 +285,48 @@ JNIEXPORT jobject JNICALL Java_com_maplibre_jni_MaplibreMap_nativeLatLngForPixel
     } catch (const std::exception& e) {
         throwJavaException(env, "java/lang/RuntimeException", e.what());
         return nullptr;
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeSetDebug
+  (JNIEnv* env, jclass, jlong ptr, jint debugOptions) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        wrapper->map->setDebug(static_cast<mbgl::MapDebugOptions>(debugOptions));
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT jint JNICALL Java_com_maplibre_jni_MaplibreMap_nativeGetDebug
+  (JNIEnv* env, jclass, jlong ptr) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        return static_cast<jint>(wrapper->map->getDebug());
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return 0;
+    }
+}
+
+JNIEXPORT void JNICALL Java_com_maplibre_jni_MaplibreMap_nativeEnableRenderingStatsView
+  (JNIEnv* env, jclass, jlong ptr, jboolean enabled) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        wrapper->map->enableRenderingStatsView(enabled == JNI_TRUE);
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+    }
+}
+
+JNIEXPORT jboolean JNICALL Java_com_maplibre_jni_MaplibreMap_nativeIsRenderingStatsViewEnabled
+  (JNIEnv* env, jclass, jlong ptr) {
+    try {
+        auto* wrapper = fromJavaPointer<MapWrapper>(ptr);
+        return wrapper->map->isRenderingStatsViewEnabled() ? JNI_TRUE : JNI_FALSE;
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return JNI_FALSE;
     }
 }
 

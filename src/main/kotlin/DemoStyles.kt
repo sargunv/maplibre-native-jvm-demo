@@ -36,6 +36,12 @@ enum class DemoStyle(
     OPENFREEMAP_POSITRON(
         "OpenFreeMap Positron",
         "https://tiles.openfreemap.org/styles/positron"
+    ),
+    
+    // MapLibre Demo Tiles
+    MAPLIBRE_DEMO_TILES(
+        "MapLibre Demo Tiles",
+        "https://demotiles.maplibre.org/style.json"
     );
     
     companion object {
