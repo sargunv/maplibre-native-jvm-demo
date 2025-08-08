@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 /**
  * Configuration options for resource loading and caching.

@@ -128,7 +128,7 @@ maplibre-jni/
     └── maplibre_map.cpp        # Map and observer wrappers
 
 src/main/kotlin/
-└── com/maplibre/jni/           # Kotlin API layer
+└── org/maplibre/kmp/native/           # Kotlin API layer
     ├── NativeObject.kt         # Base class with automatic cleanup
     ├── *Types.kt               # MapLibre type wrappers
     ├── MapObserver.kt          # Event callbacks

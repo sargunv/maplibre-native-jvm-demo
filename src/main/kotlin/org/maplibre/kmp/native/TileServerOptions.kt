@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 /**
  * Configuration for tile server endpoints and URL templates.

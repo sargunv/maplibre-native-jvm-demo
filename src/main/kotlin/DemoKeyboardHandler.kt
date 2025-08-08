@@ -1,4 +1,4 @@
-import com.maplibre.jni.*
+import org.maplibre.kmp.native.*
 import java.awt.Component
 import java.awt.event.KeyEvent
 import java.awt.event.KeyListener

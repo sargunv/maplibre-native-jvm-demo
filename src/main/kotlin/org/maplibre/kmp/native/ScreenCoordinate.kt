@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 data class ScreenCoordinate(
     val x: Double,

@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 /**
  * Interface for observing map events. All methods have default empty implementations
