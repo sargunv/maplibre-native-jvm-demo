@@ -33,13 +33,22 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/maplibre_map.cpp
     src/main/cpp/jni_renderer_frontend.cpp
     src/main/cpp/renderer_handle.cpp
-    src/main/cpp/backend_factory.mm
     src/main/cpp/jawt_utils.mm
     src/main/cpp/surface_descriptors.cpp
 )
 
 # Old platform-specific backend sources are intentionally excluded from the build.
 # New backends are created via backend_factory.* and accept native surface handles.
+
+# Metal backend factory (macOS)
+if(MLN_WITH_METAL)
+    list(APPEND MAPLIBRE_JNI_SOURCES src/main/cpp/backend_factory.mm)
+endif()
+
+# Vulkan backend factory (MoltenVK) for macOS
+if(MLN_WITH_VULKAN)
+    list(APPEND MAPLIBRE_JNI_SOURCES src/main/cpp/backend_factory_vulkan.mm)
+endif()
 
 add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
 

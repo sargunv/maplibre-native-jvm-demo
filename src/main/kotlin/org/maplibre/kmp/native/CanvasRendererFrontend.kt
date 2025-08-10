@@ -11,6 +11,7 @@ class CanvasRendererFrontend(
   private val pixelRatio: Float,
   private val localFontFamily: String? = null,
 ) : RendererFrontend {
+  private var jawtAttachmentPtr: Long = 0
   private var surfaceDescPtr: Long = 0
   private var backendPtr: Long = 0
   internal var rendererPtr: Long = 0
@@ -21,8 +22,9 @@ class CanvasRendererFrontend(
   init {
     val w = (canvas.width * pixelRatio).toInt()
     val h = (canvas.height * pixelRatio).toInt()
-    surfaceDescPtr = Native.extractMetalLayerSurface(canvas, w, h)
-    backendPtr = Native.createMetalBackend(surfaceDescPtr, w, h, pixelRatio, 0)
+    jawtAttachmentPtr = Native.jawtLockAndSetupLayer(canvas, w, h)
+    surfaceDescPtr = Native.jawtGetSurfaceDescriptorFromAttachment(jawtAttachmentPtr)
+    backendPtr = Native.createDefaultBackend(surfaceDescPtr, w, h, pixelRatio, 0)
     rendererPtr = Native.rendererCreate(backendPtr, pixelRatio, localFontFamily)
     // Bind renderer observer to native frontend to receive render callbacks
     // jniFrontendPtr will be populated by MaplibreMap after constructing the frontend; bind when available
@@ -51,6 +53,18 @@ class CanvasRendererFrontend(
     if (rendererPtr != 0L) {
       Native.rendererDestroy(rendererPtr)
       rendererPtr = 0
+    }
+    if (backendPtr != 0L) {
+      // backend is owned by native renderer lifetime; safe to drop pointer
+      backendPtr = 0
+    }
+    if (surfaceDescPtr != 0L) {
+      Native.destroySurfaceDescriptor(surfaceDescPtr)
+      surfaceDescPtr = 0
+    }
+    if (jawtAttachmentPtr != 0L) {
+      Native.jawtUnlockAndRelease(jawtAttachmentPtr)
+      jawtAttachmentPtr = 0
     }
     latestParamsId = 0
   }

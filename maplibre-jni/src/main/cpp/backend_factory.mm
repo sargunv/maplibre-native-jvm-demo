@@ -120,6 +120,11 @@ JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_createMetal
     }
 }
 
+JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_createDefaultBackend(JNIEnv* env, jclass, jlong surfaceDescPtr, jint width, jint height, jfloat pixelRatio, jint contextMode) {
+    // On Metal builds, default backend is Metal
+    return Java_org_maplibre_kmp_native_internal_Native_createMetalBackend(env, nullptr, surfaceDescPtr, width, height, pixelRatio, contextMode);
+}
+
 JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_internal_Native_backendSetSize(JNIEnv* env, jclass, jlong backendPtr, jint width, jint height) {
     try {
         auto* backend = reinterpret_cast<MetalBackend2*>(backendPtr);

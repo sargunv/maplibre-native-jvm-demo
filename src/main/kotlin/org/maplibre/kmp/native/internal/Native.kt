@@ -11,10 +11,13 @@ object Native {
   @JvmStatic external fun createJniRendererFrontend(kotlinFrontend: Any): Long
   @JvmStatic external fun destroyJniRendererFrontend(ptr: Long)
 
-  @JvmStatic external fun extractMetalLayerSurface(canvas: Canvas, width: Int, height: Int): Long
+  // JAWT lifecycle: lock and set up layer; get descriptor; unlock on teardown
+  @JvmStatic external fun jawtLockAndSetupLayer(canvas: Canvas, width: Int, height: Int): Long
+  @JvmStatic external fun jawtGetSurfaceDescriptorFromAttachment(attachmentPtr: Long): Long
+  @JvmStatic external fun jawtUnlockAndRelease(attachmentPtr: Long)
   @JvmStatic external fun destroySurfaceDescriptor(ptr: Long)
 
-  @JvmStatic external fun createMetalBackend(surfaceDescPtr: Long, width: Int, height: Int, pixelRatio: Float, contextMode: Int): Long
+  @JvmStatic external fun createDefaultBackend(surfaceDescPtr: Long, width: Int, height: Int, pixelRatio: Float, contextMode: Int): Long
   @JvmStatic external fun backendSetSize(backendPtr: Long, width: Int, height: Int)
   @JvmStatic external fun backendGetThreadPoolPtr(backendPtr: Long): Long
 
