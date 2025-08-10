@@ -120,9 +120,19 @@ JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_createMetal
     }
 }
 
-JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_createDefaultBackend(JNIEnv* env, jclass, jlong surfaceDescPtr, jint width, jint height, jfloat pixelRatio, jint contextMode) {
-    // On Metal builds, default backend is Metal
-    return Java_org_maplibre_kmp_native_internal_Native_createMetalBackend(env, nullptr, surfaceDescPtr, width, height, pixelRatio, contextMode);
+JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_createDefaultBackend(JNIEnv* env, jclass, jlong surfaceDescPtr, jint width, jint height, jfloat /*pixelRatio*/, jint /*contextMode*/) {
+    // Inline Metal backend creation for default path
+    try {
+        auto* desc = fromJavaPointer<SurfaceDescriptor>(surfaceDescPtr);
+        if (!desc || desc->kind != SurfaceKind::Mac) throw std::runtime_error("Invalid macOS surface descriptor");
+        auto* layer = (CA::MetalLayer*)desc->u.mac.caLayer;
+        auto* backend = new MetalBackend2(layer, mbgl::gfx::ContextMode::Unique);
+        backend->setSize(mbgl::Size{static_cast<uint32_t>(width), static_cast<uint32_t>(height)});
+        return toJavaPointer(static_cast<gfx::RendererBackend*>(backend));
+    } catch (const std::exception& e) {
+        throwJavaException(env, "java/lang/RuntimeException", e.what());
+        return 0;
+    }
 }
 
 JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_internal_Native_backendSetSize(JNIEnv* env, jclass, jlong backendPtr, jint width, jint height) {
