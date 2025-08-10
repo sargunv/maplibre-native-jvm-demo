@@ -18,7 +18,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include(FetchContent)
 
 # MapLibre version to use
-set(MAPLIBRE_VERSION "core-aeaadc06b4e0614f4f243db4dce210c22dde9f9c")
+set(MAPLIBRE_VERSION "core-fe158c7e9b0b3f748f88d34ad384a7bcbc2cf903")
 set(MAPLIBRE_BASE_URL "https://github.com/maplibre/maplibre-native/releases/download/${MAPLIBRE_VERSION}")
 
 # Download headers (common for all platforms)
@@ -85,9 +85,12 @@ set_target_properties(Mapbox::Map PROPERTIES
 # Set include directories for the imported target
 target_include_directories(Mapbox::Map INTERFACE
     ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/metal-cpp
     ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/deps/geojson.hpp/include
     ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/deps/geometry.hpp/include
     ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/deps/variant/include
+    ${CMAKE_BINARY_DIR}/_deps/maplibre-headers/vendor/maplibre-native-base/extras/expected-lite/include
 )
 
 # Create our JNI library
@@ -161,22 +164,6 @@ target_include_directories(maplibre-jni PRIVATE
 if(WIN32)
     # Windows platform headers would be needed here if available in tarball
     # Note: vcpkg dependencies would need to be handled separately if needed
-endif()
-
-# Add Metal-cpp headers for macOS
-if(MLN_WITH_METAL)
-    # Download metal-cpp headers separately since they're not in the tarball
-    FetchContent_Declare(
-        metal_cpp
-        GIT_REPOSITORY https://github.com/bkaradzic/metal-cpp.git
-        GIT_TAG metal-cpp_macOS15.2_iOS18.2
-        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/metal-cpp
-    )
-    FetchContent_MakeAvailable(metal_cpp)
-    
-    target_include_directories(maplibre-jni PRIVATE
-        ${CMAKE_BINARY_DIR}/_deps/metal-cpp
-    )
 endif()
 
 target_compile_options(maplibre-jni PRIVATE

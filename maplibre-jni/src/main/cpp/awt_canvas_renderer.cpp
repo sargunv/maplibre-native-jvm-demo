@@ -8,7 +8,6 @@
 #include <mbgl/gfx/renderable.hpp>
 #include <mbgl/renderer/renderer.hpp>
 #include <mbgl/renderer/renderer_observer.hpp>
-#include <mbgl/renderer/update_parameters.hpp>
 #include <mbgl/util/async_task.hpp>
 #include <mbgl/util/logging.hpp>
 #include <mbgl/util/run_loop.hpp>
