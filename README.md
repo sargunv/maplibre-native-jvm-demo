@@ -45,11 +45,11 @@ The project supports multiple graphics backends per platform. Use CMake presets 
 - `./gradlew run -Pcmake.preset=macos-vulkan` - Vulkan via MoltenVK
 
 **Linux:**
-- `./gradlew run -Pcmake.preset=linux-egl` (default) - OpenGL ES 2.0 via EGL
+- `./gradlew run -Pcmake.preset=linux-egl` (default) - OpenGL ES 3.0 via EGL
 - `./gradlew run -Pcmake.preset=linux-glx` - Desktop OpenGL 3.0 via GLX
 - `./gradlew run -Pcmake.preset=linux-vulkan` - Native Vulkan
 
 **Windows:**
 - `./gradlew run -Pcmake.preset=windows-wgl` (default on x64) - OpenGL 3.0 via WGL
 - `./gradlew run -Pcmake.preset=windows-vulkan` (default on ARM64) - Native Vulkan
-- `./gradlew run -Pcmake.preset=windows-egl` - OpenGL ES 2.0 via ANGLE
+- `./gradlew run -Pcmake.preset=windows-egl` - OpenGL ES 3.0 via ANGLE
