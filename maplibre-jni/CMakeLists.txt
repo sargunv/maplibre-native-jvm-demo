@@ -31,64 +31,37 @@ set(MAPLIBRE_JNI_SOURCES
     src/main/cpp/conversions/resourceoptions_conversions.cpp
     src/main/cpp/map_observer.cpp
     src/main/cpp/maplibre_map.cpp
-    src/main/cpp/awt_canvas_renderer.cpp
-    src/main/cpp/awt_backend_factory.cpp
+    src/main/cpp/jni_renderer_frontend.cpp
+    src/main/cpp/renderer_handle.cpp
+    src/main/cpp/backend_factory.mm
+    src/main/cpp/jawt_utils.mm
+    src/main/cpp/surface_descriptors.cpp
 )
 
-# Add platform-specific backend sources
-if(MLN_WITH_METAL)
-    list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_metal_backend.mm
-    )
-elseif(MLN_WITH_VULKAN)
-    list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_vulkan_backend.cpp
-    )
-    if(APPLE)
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/awt_vulkan_backend_macos.mm
-        )
-    endif()
-elseif(MLN_WITH_OPENGL)
-    # Common GL backend files
-    list(APPEND MAPLIBRE_JNI_SOURCES 
-        src/main/cpp/awt_gl_backend.cpp
-        src/main/cpp/gl_context_strategy.hpp
-    )
-    
-    if(MLN_WITH_EGL)
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/egl_context_strategy.cpp
-        )
-    elseif(WIN32)
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/wgl_context_strategy.cpp
-        )
-    elseif(UNIX AND NOT APPLE)
-        # Linux with GLX (desktop OpenGL)
-        list(APPEND MAPLIBRE_JNI_SOURCES 
-            src/main/cpp/glx_context_strategy.cpp
-        )
-    endif()
-else()
-    message(FATAL_ERROR "Unsupported backend configuration.")
-endif()
+# Old platform-specific backend sources are intentionally excluded from the build.
+# New backends are created via backend_factory.* and accept native surface handles.
 
 add_library(maplibre-jni SHARED ${MAPLIBRE_JNI_SOURCES})
 
 # Include directories
-target_include_directories(maplibre-jni PRIVATE
-    ${JNI_INCLUDE_DIRS}
-    ${JNI_HEADERS_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/default/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/src
+# Mark external/vendor includes as SYSTEM to suppress warnings from their headers
+target_include_directories(maplibre-jni
+    PRIVATE
+        ${JNI_INCLUDE_DIRS}
+        ${JNI_HEADERS_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/main/cpp
+)
+
+target_include_directories(maplibre-jni
+    SYSTEM PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/default/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/src
 )
 
 # Add Windows-specific includes
 if(WIN32)
-    target_include_directories(maplibre-jni PRIVATE
+    target_include_directories(maplibre-jni SYSTEM PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/include
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/platform/windows/vendor/vcpkg/installed/x64-windows/include
     )
@@ -96,7 +69,7 @@ endif()
 
 # Add Metal-cpp headers for macOS
 if(MLN_WITH_METAL)
-    target_include_directories(maplibre-jni PRIVATE
+    target_include_directories(maplibre-jni SYSTEM PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/../vendor/maplibre-native/vendor/metal-cpp
     )
 endif()
@@ -164,7 +137,7 @@ endif()
 if(UNIX AND NOT APPLE)
     find_package(X11 REQUIRED)
     target_link_libraries(maplibre-jni PRIVATE ${X11_LIBRARIES})
-    target_include_directories(maplibre-jni PRIVATE ${X11_INCLUDE_DIR})
+    target_include_directories(maplibre-jni SYSTEM PRIVATE ${X11_INCLUDE_DIR})
 endif()
 
 if(MLN_WITH_VULKAN)
@@ -191,7 +164,7 @@ if(MLN_WITH_OPENGL AND MLN_WITH_EGL)
 elseif(MLN_WITH_OPENGL)
     find_package(OpenGL REQUIRED)
     target_link_libraries(maplibre-jni PRIVATE OpenGL::GL)
-    target_include_directories(maplibre-jni PRIVATE ${OpenGL_INCLUDE_DIR})
+    target_include_directories(maplibre-jni SYSTEM PRIVATE ${OpenGL_INCLUDE_DIR})
     
     # Link GLX on Linux when not using EGL
     if(UNIX AND NOT APPLE AND NOT MLN_WITH_EGL)

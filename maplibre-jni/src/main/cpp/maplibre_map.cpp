@@ -1,11 +1,12 @@
 #include "org_maplibre_kmp_native_MaplibreMap.h"
 #include "jni_helpers.hpp"
-#include "awt_canvas_renderer.hpp"
+// #include "awt_canvas_renderer.hpp"
+#include "jni_renderer_frontend.hpp"
 #include "map_observer.hpp"
 
-#if defined(USE_EGL_BACKEND) || defined(USE_WGL_BACKEND)
-#include "awt_gl_backend.hpp"
-#endif
+//#if defined(USE_EGL_BACKEND) || defined(USE_WGL_BACKEND)
+//#include "awt_gl_backend.hpp"
+//#endif
 #include "conversions/size_conversions.hpp"
 #include "conversions/cameraoptions_conversions.hpp"
 #include "conversions/mapoptions_conversions.hpp"
@@ -27,88 +28,63 @@
 #include <memory>
 
 // Wrapper struct to manage objects whose lifetime must match the Map's lifetime
-struct MapWrapper
-{
+
+struct MapWrapperWithFrontend {
     std::unique_ptr<mbgl::Map> map;
     std::unique_ptr<maplibre_jni::JniMapObserver> observer;
-    std::unique_ptr<maplibre_jni::AwtCanvasRenderer> renderer;
+    std::unique_ptr<maplibre_jni::JniRendererFrontend> frontend;
 
-    MapWrapper(mbgl::Map *m, maplibre_jni::JniMapObserver *o, maplibre_jni::AwtCanvasRenderer *r)
-        : map(m), observer(o), renderer(r) {}
+    MapWrapperWithFrontend(mbgl::Map* m, maplibre_jni::JniMapObserver* o, maplibre_jni::JniRendererFrontend* f)
+        : map(m), observer(o), frontend(f) {}
 };
 
 extern "C"
 {
 
-    JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeNew(JNIEnv *env, jclass, jobject canvasObj, jint width, jint height, jfloat pixelRatio, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj)
+    // New entry that accepts a Kotlin-side RendererFrontend (wrapped by JniRendererFrontend on native side)
+    JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_internal_Native_nativeNewWithFrontend(JNIEnv *env, jclass, jlong frontendPtr, jobject mapObserverObj, jobject mapOptionsObj, jobject resourceOptionsObj, jobject clientOptionsObj)
     {
-        try
-        {
-            // Create the renderer from the Canvas
-            auto renderer = maplibre_jni::AwtCanvasRenderer::create(
-                env, canvasObj, width, height, pixelRatio, std::nullopt);
-
-            // Create the JniMapObserver from the Java MapObserver object
-            auto *observer = new maplibre_jni::JniMapObserver(env, mapObserverObj);
-
-            // Extract MapOptions from Java object
+        try {
+            auto* frontend = fromJavaPointer<maplibre_jni::JniRendererFrontend>(frontendPtr);
+            auto* observer = new maplibre_jni::JniMapObserver(env, mapObserverObj);
             mbgl::MapOptions mapOptions = maplibre_jni::MapOptionsConversions::extract(env, mapOptionsObj);
-
-            // Extract ResourceOptions from Java object
             mbgl::ResourceOptions resourceOptions = maplibre_jni::ResourceOptionsConversions::extract(env, resourceOptionsObj);
-
-            // Extract ClientOptions from Java object
             mbgl::ClientOptions clientOptions = maplibre_jni::ClientOptionsConversions::extract(env, clientOptionsObj);
-
-            auto *map = new mbgl::Map(
-                *renderer,
-                *observer,
-                mapOptions,
-                resourceOptions,
-                clientOptions);
-
-            // Get network file source for HTTP downloads
-            std::shared_ptr<mbgl::FileSource> networkFileSource =
-                mbgl::FileSourceManager::get()->getFileSource(
-                    mbgl::FileSourceType::Network, resourceOptions, clientOptions);
-
-            // Get resource loader for request management
-            std::shared_ptr<mbgl::FileSource> resourceLoader =
-                mbgl::FileSourceManager::get()->getFileSource(
-                    mbgl::FileSourceType::ResourceLoader, resourceOptions, clientOptions);
-
-            // Get database file source for caching
-            std::shared_ptr<mbgl::FileSource> databaseFileSource =
-                mbgl::FileSourceManager::get()->getFileSource(
-                    mbgl::FileSourceType::Database, resourceOptions, clientOptions);
-
-            // Create wrapper to manage map, observer, and renderer lifetime
-            auto *wrapper = new MapWrapper(map, observer, renderer.release());
-
+            auto* map = new mbgl::Map(*frontend, *observer, mapOptions, resourceOptions, clientOptions);
+            auto* wrapper = new MapWrapperWithFrontend(map, observer, nullptr);
             return toJavaPointer(wrapper);
-        }
-        catch (const std::exception &e)
-        {
+        } catch (const std::exception& e) {
             throwJavaException(env, "java/lang/RuntimeException", e.what());
             return 0;
         }
     }
 
-    JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeDestroy(JNIEnv *env, jclass, jlong ptr)
+    // Deprecated path: constructor via Canvas is no longer supported.
+    JNIEXPORT jlong JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeNew(JNIEnv *env, jclass, jobject, jint, jint, jfloat, jobject, jobject, jobject, jobject)
     {
-        // Deleting the wrapper will automatically delete both map and observer via unique_ptr
-        delete fromJavaPointer<MapWrapper>(ptr);
+        throwJavaException(env, "java/lang/UnsupportedOperationException", "Use MaplibreMap(frontend, ...) constructor");
+        return 0;
     }
+
+JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeDestroy(JNIEnv *env, jclass, jlong ptr)
+{
+    delete fromJavaPointer<MapWrapperWithFrontend>(ptr);
+}
+
+JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_internal_Native_nativeDestroyWithFrontend(JNIEnv* env, jclass, jlong ptr) {
+    delete fromJavaPointer<MapWrapperWithFrontend>(ptr);
+}
+
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeTriggerRepaint(JNIEnv *env, jclass, jlong ptr)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         wrapper->map->triggerRepaint();
     }
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeLoadStyleURL(JNIEnv *env, jclass, jlong ptr, jstring jUrl)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         const char *url = env->GetStringUTFChars(jUrl, nullptr);
         wrapper->map->getStyle().loadURL(std::string(url));
         env->ReleaseStringUTFChars(jUrl, url);
@@ -116,7 +92,7 @@ extern "C"
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeLoadStyleJSON(JNIEnv *env, jclass, jlong ptr, jstring jJson)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         const char *json = env->GetStringUTFChars(jJson, nullptr);
         wrapper->map->getStyle().loadJSON(std::string(json));
         env->ReleaseStringUTFChars(jJson, json);
@@ -124,14 +100,14 @@ extern "C"
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeJumpTo(JNIEnv *env, jclass, jlong ptr, jobject cameraOptions)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
         wrapper->map->jumpTo(options);
     }
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeEaseTo(JNIEnv *env, jclass, jlong ptr, jobject cameraOptions, jint duration)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
 
         mbgl::AnimationOptions animationOptions;
@@ -142,7 +118,7 @@ extern "C"
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeFlyTo(JNIEnv *env, jclass, jlong ptr, jobject cameraOptions, jint duration)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         mbgl::CameraOptions options = maplibre_jni::CameraOptionsConversions::extract(env, cameraOptions);
 
         mbgl::AnimationOptions animationOptions;
@@ -153,7 +129,7 @@ extern "C"
 
     JNIEXPORT jobject JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeGetCameraOptions(JNIEnv *env, jclass, jlong ptr)
     {
-        auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+        auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
         auto cameraOptions = wrapper->map->getCameraOptions();
         return maplibre_jni::CameraOptionsConversions::create(env, cameraOptions);
     }
@@ -162,11 +138,9 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             mbgl::Size mbglSize = maplibre_jni::SizeConversions::extract(env, size);
             wrapper->map->setSize(mbglSize);
-
-            wrapper->renderer->updateSize(mbglSize.width, mbglSize.height);
         }
         catch (const std::exception &e)
         {
@@ -174,53 +148,12 @@ extern "C"
         }
     }
 
-    JNIEXPORT jboolean JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeTick(JNIEnv *env, jclass, jlong ptr)
-    {
-        try
-        {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
-            return wrapper->renderer->tick() ? JNI_TRUE : JNI_FALSE;
-        }
-        catch (const std::exception &e)
-        {
-            throwJavaException(env, "java/lang/RuntimeException", e.what());
-            return JNI_FALSE;
-        }
-    }
-
-    JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeSetOpenGLSwapBehavior(JNIEnv *env, jclass, jlong ptr, jboolean flush)
-    {
-        try
-        {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
-            if (wrapper && wrapper->renderer)
-            {
-#if defined(USE_EGL_BACKEND) || defined(USE_WGL_BACKEND)
-                // Only applies to OpenGL backends
-                auto *backend = dynamic_cast<maplibre_jni::GLBackend *>(
-                    wrapper->renderer->getRendererBackend());
-                if (backend)
-                {
-                    backend->setSwapBehavior(flush ? mbgl::gfx::Renderable::SwapBehaviour::Flush
-                                                   : mbgl::gfx::Renderable::SwapBehaviour::NoFlush);
-                }
-#else
-                // No-op for Metal and Vulkan
-                (void)flush;
-#endif
-            }
-        }
-        catch (const std::exception &e)
-        {
-            throwJavaException(env, "java/lang/RuntimeException", e.what());
-        }
-    }
 
     JNIEXPORT void JNICALL Java_org_maplibre_kmp_native_MaplibreMap_nativeMoveBy(JNIEnv *env, jclass, jlong ptr, jobject screenCoordinate)
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             mbgl::ScreenCoordinate coord = maplibre_jni::ScreenCoordinateConversions::extract(env, screenCoordinate);
             wrapper->map->moveBy(coord);
         }
@@ -234,7 +167,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             if (anchor != nullptr)
             {
                 mbgl::ScreenCoordinate anchorCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, anchor);
@@ -255,7 +188,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             mbgl::ScreenCoordinate firstCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, first);
             mbgl::ScreenCoordinate secondCoord = maplibre_jni::ScreenCoordinateConversions::extract(env, second);
             wrapper->map->rotateBy(firstCoord, secondCoord);
@@ -270,7 +203,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             wrapper->map->pitchBy(pitch);
         }
         catch (const std::exception &e)
@@ -283,7 +216,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             wrapper->map->setGestureInProgress(inProgress == JNI_TRUE);
         }
         catch (const std::exception &e)
@@ -296,7 +229,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             mbgl::LatLng coord = maplibre_jni::LatLngConversions::extract(env, latLng);
             mbgl::ScreenCoordinate screenCoord = wrapper->map->pixelForLatLng(coord);
             return maplibre_jni::ScreenCoordinateConversions::create(env, screenCoord);
@@ -312,7 +245,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             mbgl::ScreenCoordinate coord = maplibre_jni::ScreenCoordinateConversions::extract(env, screenCoordinate);
             mbgl::LatLng latLng = wrapper->map->latLngForPixel(coord);
             return maplibre_jni::LatLngConversions::create(env, latLng);
@@ -328,7 +261,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             wrapper->map->setDebug(static_cast<mbgl::MapDebugOptions>(debugOptions));
         }
         catch (const std::exception &e)
@@ -341,7 +274,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             return static_cast<jint>(wrapper->map->getDebug());
         }
         catch (const std::exception &e)
@@ -355,7 +288,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             wrapper->map->enableRenderingStatsView(enabled == JNI_TRUE);
         }
         catch (const std::exception &e)
@@ -368,7 +301,7 @@ extern "C"
     {
         try
         {
-            auto *wrapper = fromJavaPointer<MapWrapper>(ptr);
+            auto *wrapper = fromJavaPointer<MapWrapperWithFrontend>(ptr);
             return wrapper->map->isRenderingStatsViewEnabled() ? JNI_TRUE : JNI_FALSE;
         }
         catch (const std::exception &e)

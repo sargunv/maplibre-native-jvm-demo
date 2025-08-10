@@ -59,8 +59,9 @@ class MaplibreCanvas(
         )
       )
 
+      val frontend = CanvasRendererFrontend(this, pixelRatio)
       val map = MaplibreMap(
-        canvas = this,
+        frontend = frontend,
         mapObserver = mapObserver,
         mapOptions = adjustedMapOptions,
         resourceOptions = resourceOptions,

@@ -1,48 +1,45 @@
 package org.maplibre.kmp.native
 
-import java.awt.Canvas
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 
 /**
  * The MaplibreMap class manages the map state, style, and camera position.
  * It also manages the renderer lifecycle, creating it internally from the provided Canvas.
  */
 class MaplibreMap(
-    private val canvas: Canvas,  // Keep reference to prevent GC
-    private val mapObserver: MapObserver,  // Keep reference to prevent GC
+    private val frontend: RendererFrontend,
+    private val mapObserver: MapObserver,
     mapOptions: MapOptions,
     private val resourceOptions: ResourceOptions,
     private val clientOptions: ClientOptions,
 ) : NativeObject(
   new = {
-    val pixelRatio = canvas.graphicsConfiguration?.defaultTransform?.scaleX?.toFloat()
-      ?: 1.0f
-    nativeNew(
-      canvas = canvas,
-      width = (canvas.width * pixelRatio).toInt(),
-      height = (canvas.height * pixelRatio).toInt(),
-      pixelRatio = pixelRatio,
-      mapObserver = mapObserver,
-      mapOptions = mapOptions,
-      resourceOptions = resourceOptions,
-      clientOptions = clientOptions
+    // Create native JniRendererFrontend and Map
+    if (frontend is CanvasRendererFrontend) {
+      // bind back-pointer used for rendering
+      frontend.jniFrontendPtr = org.maplibre.kmp.native.internal.Native.createJniRendererFrontend(frontend)
+      // now that both renderer and frontend exist, bind observer
+      if (frontend.rendererPtr != 0L) {
+        org.maplibre.kmp.native.internal.Native.rendererBindObserver(frontend.rendererPtr, frontend.jniFrontendPtr)
+      }
+    }
+    org.maplibre.kmp.native.internal.Native.nativeNewWithFrontend(
+      (frontend as? CanvasRendererFrontend)?.jniFrontendPtr ?: org.maplibre.kmp.native.internal.Native.createJniRendererFrontend(frontend),
+      mapObserver,
+      mapOptions,
+      resourceOptions,
+      clientOptions
     )
   },
-  destroy = ::nativeDestroy
+  destroy = { ptr ->
+    org.maplibre.kmp.native.internal.Native.nativeDestroyWithFrontend(ptr)
+    if (frontend is CanvasRendererFrontend && frontend.jniFrontendPtr != 0L) {
+      org.maplibre.kmp.native.internal.Native.destroyJniRendererFrontend(frontend.jniFrontendPtr)
+      frontend.jniFrontendPtr = 0
+    }
+  }
 ) {
 
-  init {
-    canvas.addComponentListener(object : ComponentAdapter() {
-      override fun componentResized(e: ComponentEvent) {
-        val scale =
-          canvas.graphicsConfiguration!!.defaultTransform.scaleX.toFloat()
-        val pixelWidth = (canvas.width * scale).toInt()
-        val pixelHeight = (canvas.height * scale).toInt()
-        this@MaplibreMap.setSize(Size(pixelWidth, pixelHeight))
-      }
-    })
-  }
+  // Size changes should be handled by the frontend; MaplibreMap no longer listens to AWT events.
 
    /**
      * Process events and render if needed.
@@ -50,17 +47,9 @@ class MaplibreMap(
      * @return true if rendering occurred, false if there was nothing to render
      */
     fun tick(): Boolean {
-        return nativeTick(nativePtr)
+        return (frontend as? CanvasRendererFrontend)?.tick() ?: false
     }
     
-    /**
-     * Sets the OpenGL swap behavior (has no effect on Metal/Vulkan backends).
-     * @param flush If true, waits for GPU to complete all commands (glFinish).
-     *              If false, returns immediately after swap (default, better performance).
-     */
-    fun setOpenGLSwapBehavior(flush: Boolean) {
-        nativeSetOpenGLSwapBehavior(nativePtr, flush)
-    }
 
     /**
      * Triggers a repaint of the map.
@@ -223,21 +212,6 @@ class MaplibreMap(
     companion object {
 
         @JvmStatic
-        private external fun nativeNew(
-            canvas: Canvas,
-            width: Int,
-            height: Int,
-            pixelRatio: Float,
-            mapObserver: MapObserver,
-            mapOptions: MapOptions,
-            resourceOptions: ResourceOptions,
-            clientOptions: ClientOptions
-        ): Long
-
-        @JvmStatic
-        private external fun nativeDestroy(ptr: Long)
-
-        @JvmStatic
         private external fun nativeTriggerRepaint(ptr: Long)
 
         @JvmStatic
@@ -261,11 +235,6 @@ class MaplibreMap(
         @JvmStatic
         private external fun nativeSetSize(ptr: Long, size: Size)
 
-        @JvmStatic
-        private external fun nativeTick(ptr: Long): Boolean
-        
-        @JvmStatic
-        private external fun nativeSetOpenGLSwapBehavior(ptr: Long, flush: Boolean)
 
         @JvmStatic
         private external fun nativeMoveBy(ptr: Long, screenCoordinate: ScreenCoordinate)
