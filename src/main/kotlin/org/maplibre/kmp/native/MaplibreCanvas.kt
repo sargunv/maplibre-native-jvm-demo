@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 import java.awt.Canvas
 import java.awt.Graphics

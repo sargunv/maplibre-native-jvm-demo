@@ -1,5 +1,5 @@
-import com.maplibre.jni.MapLoadError
-import com.maplibre.jni.MapObserver
+import org.maplibre.kmp.native.MapLoadError
+import org.maplibre.kmp.native.MapObserver
 
 class DemoObserver : MapObserver {
   override fun onWillStartLoadingMap() {

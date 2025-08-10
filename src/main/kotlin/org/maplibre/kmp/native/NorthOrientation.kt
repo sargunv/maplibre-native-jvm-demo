@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 enum class NorthOrientation(val nativeValue: Int) {
     UPWARDS(0),

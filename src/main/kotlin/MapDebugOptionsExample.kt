@@ -1,4 +1,4 @@
-import com.maplibre.jni.MapDebugOptions
+import org.maplibre.kmp.native.MapDebugOptions
 
 /**
  * Examples of using the MapDebugOptions value class

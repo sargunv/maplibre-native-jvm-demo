@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption

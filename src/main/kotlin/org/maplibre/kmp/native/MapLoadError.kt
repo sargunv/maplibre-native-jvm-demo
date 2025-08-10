@@ -1,4 +1,4 @@
-package com.maplibre.jni
+package org.maplibre.kmp.native
 
 enum class MapLoadError {
     STYLE_PARSE_ERROR,
