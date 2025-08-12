@@ -1,6 +1,6 @@
-# kotlin-maplibre-native
+# maplibre-native-jvm-demo
 
-MapLibre Native JVM bindings for desktop platforms. This project enables MapLibre Native rendering in Java/Kotlin desktop applications using AWT/Swing with native graphics backends.
+This project demos MapLibre Native rendering in Java/Kotlin desktop applications using AWT with native graphics backends.
 
 ### Platform support
 
