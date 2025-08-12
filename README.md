@@ -1,6 +1,6 @@
 # maplibre-native-jvm-demo
 
-This project demos MapLibre Native rendering in Java/Kotlin desktop applications using AWT with native graphics backends.
+This project demos MapLibre Native rendering in Kotlin/JVM desktop applications using AWT with native graphics backends.
 
 ### Platform support
 
